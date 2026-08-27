@@ -6,6 +6,7 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 .vscode/
+.kilo/
 
 # Environment variables
 .env*.local
