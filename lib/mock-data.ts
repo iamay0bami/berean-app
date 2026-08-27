@@ -1,183 +1,139 @@
-import type { DiscussionData, Lesson, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import { createClient } from '@/lib/supabase/server'
 
-const lessons: Lesson[] = [
-  {
-    id: 'a-faith-that-listens',
-    week: 'WEEK 04',
-    number: '04',
-    title: 'A faith that listens',
-    excerpt: 'Learning to receive the Word with an open heart.',
-    duration: '18 min',
-    progress: 68,
-    track: 'foundations',
-    sectionLabel: 'THE PRACTICE OF LISTENING',
-    quote: '“Let everyone be quick to listen, slow to speak, and slow to become angry.”',
-    reference: 'JAMES 1:19',
-    paragraphs: [
-      'There is a kind of faith that is always talking. It fills the silence with answers, advice, and certainty. But the life Jesus invites us into begins somewhere quieter.',
-      'Listening is not passive. It is the brave, attentive work of making room — for God, for one another, and for the parts of ourselves we would rather hurry past.',
-      'Today, try noticing before fixing. Receive before responding. Let your attention become an act of love.',
-    ],
-    marginNote: 'What would change if you believed you didn’t have to have the last word?',
-    questions: [
-      { id: 'quiet-enough', text: 'What helps you become quiet enough to listen?' },
-      { id: 'resisting-word', text: 'Where might you be resisting the Word right now?' },
-    ],
-    thoughts: [
-      {
-        id: 'elena-m',
-        initials: 'EM',
-        name: 'Elena M.',
-        timestamp: '2 HOURS AGO',
-        text: '“Listening to my daughter without reaching for a lesson. It felt small, but it felt like love.”',
-        hearts: 7,
-      },
-    ],
-  },
-  {
-    id: 'the-work-of-becoming',
-    week: 'WEEK 05',
-    number: '05',
-    title: 'The work of becoming',
-    excerpt: 'Grace is not a finish line. It is a way of walking.',
-    duration: '22 min',
-    progress: 0,
-    track: 'foundations',
-    sectionLabel: 'THE WORK OF BECOMING',
-    quote: '“He who began a good work in you will carry it on to completion.”',
-    reference: 'PHILIPPIANS 1:6',
-    paragraphs: ['Grace meets us in motion, shaping the person we are becoming one faithful step at a time.'],
-    marginNote: 'What patient work is God doing in you?',
-    questions: [{ id: 'patient-work', text: 'Where are you learning to trust the process?' }],
-    thoughts: [],
-  },
-  {
-    id: 'when-the-road-gets-hard',
-    week: 'WEEK 06',
-    number: '06',
-    title: 'When the road gets hard',
-    excerpt: 'What endurance makes possible in us.',
-    duration: '16 min',
-    progress: 0,
-    track: 'foundations',
-    sectionLabel: 'THE LONG ROAD',
-    quote: '“Let us run with perseverance the race marked out for us.”',
-    reference: 'HEBREWS 12:1',
-    paragraphs: ['Endurance does not make the road easy, but it teaches us how to keep walking with hope.'],
-    marginNote: 'What helps you keep going?',
-    questions: [{ id: 'keep-going', text: 'Where do you need a little more courage today?' }],
-    thoughts: [],
-  },
-]
+type Display = { id: string; name: string; initials: string }
+type AuthorRow = { author_id: string }
 
-const sermons: Sermon[] = [
-  {
-    id: 'the-table-is-still-set',
-    date: 'AUG 18, 2024',
-    detailDate: 'AUGUST 18, 2024',
-    title: 'The Table Is Still Set',
-    speaker: 'Pastor Caleb Mensah',
-    text: 'There is room at the table. Not because we have earned our seat, but because love made room first.',
-    tag: 'COMMUNITY',
-    paragraphs: [
-      'We are often tempted to think belonging is something we can achieve. A place we can earn by knowing the right words, showing up enough, or getting our lives in order.',
-      'But Jesus keeps setting the table before we are ready. He calls us by name before we can prove ourselves. This is the good news: the invitation is already ours.',
-    ],
-    marginNote: '“Love made room first.”',
-    closing: 'Who might need to hear that there is a place for them this week? Carry the invitation outward.',
-  },
-  {
-    id: 'a-better-kind-of-waiting',
-    date: 'AUG 11, 2024',
-    detailDate: 'AUGUST 11, 2024',
-    title: 'A Better Kind of Waiting',
-    speaker: 'Pastor Miriam Cole',
-    text: 'Waiting is not wasted time when God is teaching us how to hope.',
-    tag: 'HOPE',
-    paragraphs: ['Waiting can become a place where hope grows roots and our attention returns to what matters.'],
-    marginNote: 'Hope is being formed in the waiting.',
-    closing: 'What would it look like to wait with open hands this week?',
-  },
-]
-
-const prayerPoints: PrayerPoint[] = [
-  {
-    id: 'students-returning',
-    initials: 'JM',
-    name: 'Jon M.',
-    time: '12 min ago',
-    text: 'Praying for the students heading back to school this week — for courage, good friends, and quiet moments to breathe.',
-    hearts: 14,
-  },
-  {
-    id: 'annas-dad',
-    initials: 'AR',
-    name: 'Anna R.',
-    time: 'Yesterday',
-    text: 'Please pray for my dad as he starts a new round of treatment. We are holding onto hope together.',
-    hearts: 28,
-  },
-]
-
-const discussionData: DiscussionData = {
-  prompt: 'Where have you noticed grace making room for you lately?',
-  peopleCount: 12,
-  entries: [
-    { id: 'theo-d', initials: 'TD', name: 'Theo D.', timestamp: '1 DAY AGO', text: '“I found it in a friend who kept showing up when I was hard to reach.”', hearts: 3 },
-    { id: 'rachel-k', initials: 'RK', name: 'Rachel K.', timestamp: '2 DAYS AGO', text: '“At the hospital, when a nurse remembered my name.”', hearts: 4 },
-  ],
+function relativeTime(value: string) {
+  const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1000))
+  if (seconds < 3600) return `${Math.floor(seconds / 60) || 1} MIN AGO`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} HOURS AGO`
+  return `${Math.floor(seconds / 86400)} DAYS AGO`
 }
 
-const profile: Profile = {
-  initials: 'MC',
-  memberSince: 'WALKING SINCE 2022',
-  name: 'Maya Collins',
-  tagline: '“Learning to be present.”',
-  stats: [
-    { value: 4, label: 'LESSONS' },
-    { value: 12, label: 'THOUGHTS' },
-    { value: 28, label: 'PRAYERS' },
-  ],
-  links: [
-    { id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' },
-    { id: 'my-reflections', label: 'My reflections', icon: 'feather' },
-    { id: 'reading-settings', label: 'Reading settings', icon: 'compass' },
-  ],
+async function displaysFor(rows: AuthorRow[]) {
+  const ids = [...new Set(rows.map(row => row.author_id).filter(Boolean))]
+  if (!ids.length) return new Map<string, Display>()
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('member_display', { member_ids: ids })
+  if (error) throw error
+  return new Map((data as Display[]).map(display => [display.id, display]))
+}
+
+function anonymousDisplay(): Display {
+  return { id: '', name: 'A member', initials: 'BM' }
+}
+
+function mapSermon(row: any): Sermon {
+  const date = new Date(`${row.date}T00:00:00`)
+  return {
+    id: row.id,
+    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
+    detailDate: row.detail_date || date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase(),
+    title: row.title,
+    speaker: row.speaker,
+    text: row.text,
+    tag: row.tag,
+    paragraphs: row.paragraphs ?? [],
+    marginNote: row.margin_note,
+    closing: row.closing,
+  }
+}
+
+async function mapLesson(row: any): Promise<Lesson> {
+  const insights = (row.insights ?? []) as any[]
+  let displays = new Map<string, Display>()
+  if (insights.length) displays = await displaysFor(insights)
+  const thoughts: LessonThought[] = insights.map(item => {
+    const author = displays.get(item.author_id) ?? anonymousDisplay()
+    return { id: item.id, initials: author.initials, name: author.name, timestamp: relativeTime(item.created_at), text: item.text, hearts: item.hearts }
+  })
+  return {
+    id: row.id, week: row.week, number: row.number, title: row.title, excerpt: row.excerpt,
+    duration: row.duration, progress: row.progress, track: row.track, sectionLabel: row.section_label,
+    quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [], marginNote: row.margin_note,
+    questions: (row.questions ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((question: any) => ({ id: question.id, text: question.text })),
+    thoughts,
+  }
 }
 
 export async function getLessons() {
-  return lessons
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('lessons').select('*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)').eq('status', 'published').order('number')
+  if (error) throw error
+  return Promise.all((data ?? []).map(mapLesson))
 }
 
 export async function getLesson(id: string) {
-  return lessons.find(lesson => lesson.id === id)
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('lessons').select('*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data ? mapLesson(data) : undefined
 }
 
 export async function getSermons() {
-  return sermons
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('sermons').select('*').eq('status', 'published').order('date', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map(mapSermon)
 }
 
 export async function getSermon(id: string) {
-  return sermons.find(sermon => sermon.id === id)
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('sermons').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data ? mapSermon(data) : undefined
 }
 
 export async function getPrayerPoints() {
-  return prayerPoints
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data, error } = await supabase.from('prayer_points').select('id,author_id,text,hearts,created_at,prayer_confirmations(count)').eq('status', 'published').order('created_at', { ascending: false })
+  if (error) throw error
+  const rows = data ?? []
+  const displays = await displaysFor(rows)
+  return rows.map((row: any): PrayerPoint => {
+    const author = displays.get(row.author_id) ?? anonymousDisplay()
+    return { id: row.id, initials: author.initials, name: author.name, time: relativeTime(row.created_at), text: row.text, hearts: row.prayer_confirmations?.[0]?.count ?? row.hearts }
+  })
 }
 
-export async function getDiscussionData() {
-  return discussionData
+export async function getDiscussionData(): Promise<DiscussionData> {
+  const supabase = await createClient()
+  const [{ data: topic }, { data, error }] = await Promise.all([
+    supabase.from('discussion_topics').select('id,prompt').eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('discussions').select('id,author_id,text,hearts,created_at,discussion_replies(id,author_id,text,hearts,created_at)').order('created_at', { ascending: false }),
+  ])
+  if (error) throw error
+  const rows = data ?? []
+  const authorRows = rows.flatMap((row: any) => [{ author_id: row.author_id }, ...(row.discussion_replies ?? []).map((reply: any) => ({ author_id: reply.author_id }))])
+  const displays = await displaysFor(authorRows)
+  const entries: DiscussionEntry[] = rows.map((row: any) => {
+    const author = displays.get(row.author_id) ?? anonymousDisplay()
+    return { id: row.id, initials: author.initials, name: author.name, timestamp: relativeTime(row.created_at), text: row.text, hearts: row.hearts }
+  })
+  return { prompt: topic?.prompt ?? 'What has stayed with you this week?', entries, peopleCount: new Set(authorRows.map(row => row.author_id)).size }
 }
 
-export async function getProfile() {
-  return profile
+export async function getProfile(): Promise<Profile | undefined> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return undefined
+  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since').eq('id', user.id).single()
+  if (error) throw error
+  const [{ count: thoughts }, { count: prayers }] = await Promise.all([
+    supabase.from('insights').select('*', { count: 'exact', head: true }).eq('author_id', user.id),
+    supabase.from('prayer_confirmations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+  ])
+  return {
+    initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline,
+    stats: [{ value: 0, label: 'LESSONS' }, { value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
+    links: [{ id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' }, { id: 'my-reflections', label: 'My reflections', icon: 'feather' }, { id: 'reading-settings', label: 'Reading settings', icon: 'compass' }],
+  }
 }
 
 export async function getHomeData() {
-  const [lesson, sermon, prayers] = await Promise.all([
-    getLesson('a-faith-that-listens'),
-    getSermon('the-table-is-still-set'),
-    getPrayerPoints(),
-  ])
-  return { lesson, sermon, prayer: prayers[0] }
+  const [lessons, sermons, prayers] = await Promise.all([getLessons(), getSermons(), getPrayerPoints()])
+  return { lesson: lessons[0], sermon: sermons[0], prayer: prayers[0] }
 }
