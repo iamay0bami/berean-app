@@ -20,6 +20,12 @@ async function displaysFor(rows: AuthorRow[]) {
   return new Map((data as Display[]).map(display => [display.id, display]))
 }
 
+async function getSessionUser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return { supabase, user }
+}
+
 function anonymousDisplay(): Display {
   return { id: '', name: 'A member', initials: 'BM' }
 }
@@ -58,15 +64,21 @@ async function mapLesson(row: any): Promise<Lesson> {
 }
 
 export async function getLessons() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('lessons').select('*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)').eq('status', 'published').order('number')
+  const { supabase, user } = await getSessionUser()
+  const select = user
+    ? '*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)'
+    : '*, questions(id,text,sort_order)'
+  const { data, error } = await supabase.from('lessons').select(select).eq('status', 'published').order('number')
   if (error) throw error
   return Promise.all((data ?? []).map(mapLesson))
 }
 
 export async function getLesson(id: string) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('lessons').select('*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)').eq('id', id).maybeSingle()
+  const { supabase, user } = await getSessionUser()
+  const select = user
+    ? '*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)'
+    : '*, questions(id,text,sort_order)'
+  const { data, error } = await supabase.from('lessons').select(select).eq('id', id).maybeSingle()
   if (error) throw error
   return data ? mapLesson(data) : undefined
 }
@@ -86,8 +98,7 @@ export async function getSermon(id: string) {
 }
 
 export async function getPrayerPoints() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getSessionUser()
   if (!user) return []
   const { data, error } = await supabase.from('prayer_points').select('id,author_id,text,hearts,created_at,prayer_confirmations(count)').eq('status', 'published').order('created_at', { ascending: false })
   if (error) throw error
@@ -100,7 +111,8 @@ export async function getPrayerPoints() {
 }
 
 export async function getDiscussionData(): Promise<DiscussionData> {
-  const supabase = await createClient()
+  const { supabase, user } = await getSessionUser()
+  if (!user) return { prompt: '', entries: [], peopleCount: 0 }
   const [{ data: topic }, { data, error }] = await Promise.all([
     supabase.from('discussion_topics').select('id,prompt').eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('discussions').select('id,author_id,text,hearts,created_at,discussion_replies(id,author_id,text,hearts,created_at)').order('created_at', { ascending: false }),
