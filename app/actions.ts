@@ -2,6 +2,50 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+
+const GENERIC_SIGN_IN_ERROR = 'Invalid email/username or password'
+const CONFIRM_EMAIL_ERROR = 'Please confirm your email before signing in — check your inbox.'
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DUMMY_RESOLUTION_EMAIL = 'no-such-account@example.com'
+
+function signInError(error: { message?: string; code?: string } | null) {
+  if (error) {
+    // GoTrue validates the password BEFORE the confirmation check, so this
+    // error can only surface to someone who already knows the correct
+    // password — showing a distinct message does not create an oracle.
+    if (error.code === 'email_not_confirmed' || error.message?.includes('Email not confirmed')) return CONFIRM_EMAIL_ERROR
+    return GENERIC_SIGN_IN_ERROR
+  }
+  return null
+}
+
+export async function signInWithIdentifier(identifier: string, password: string): Promise<{ error: string | null }> {
+  const value = identifier.trim()
+  if (!value || !password) return { error: GENERIC_SIGN_IN_ERROR }
+  // Every signInWithPassword below MUST use this cookie-bound SSR client —
+  // it is the only one whose cookie store persists the session across the
+  // server action. The service-role client is used ONLY for the
+  // resolve_username_email lookup and never signs a user in.
+  const supabase = await createClient()
+  async function attempt(email: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return error
+  }
+  if (EMAIL_PATTERN.test(value)) {
+    return { error: signInError(await attempt(value)) }
+  }
+  const { data: email } = await createServiceClient().rpc('resolve_username_email', { p_username: value })
+  if (email && typeof email === 'string') {
+    return { error: signInError(await attempt(email)) }
+  }
+  // Timing-normalization fallback for an unresolvable username: burn one
+  // throwaway sign-in attempt. GoTrue's unknown-email path returns without a
+  // bcrypt compare, so this equalizes request-level timing but NOT bcrypt
+  // cost; a fully equal approach would require a server-side hash burn.
+  await attempt(DUMMY_RESOLUTION_EMAIL)
+  return { error: GENERIC_SIGN_IN_ERROR }
+}
 
 async function userClient() {
   const supabase = await createClient()
