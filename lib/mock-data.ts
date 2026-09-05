@@ -30,6 +30,18 @@ function anonymousDisplay(): Display {
   return { id: '', name: 'A member', initials: 'BM' }
 }
 
+const DEFAULT_DISCUSSION_PROMPT = 'What has stayed with you this week?'
+
+export type ViewerRole = 'leader' | 'visitor'
+
+export async function getViewerRole(): Promise<ViewerRole> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return 'visitor'
+  const { data, error } = await supabase.rpc('current_role')
+  if (error) throw error
+  return data === 'admin' || data === 'class_leader' ? 'leader' : 'visitor'
+}
+
 function mapSermon(row: any): Sermon {
   const date = new Date(`${row.date}T00:00:00`)
   return {
@@ -112,7 +124,7 @@ export async function getPrayerPoints() {
 
 export async function getDiscussionData(): Promise<DiscussionData> {
   const { supabase, user } = await getSessionUser()
-  if (!user) return { prompt: '', entries: [], peopleCount: 0 }
+  if (!user) return { prompt: DEFAULT_DISCUSSION_PROMPT, entries: [], peopleCount: 0 }
   const [{ data: topic }, { data, error }] = await Promise.all([
     supabase.from('discussion_topics').select('id,prompt').eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('discussions').select('id,author_id,text,hearts,created_at,discussion_replies(id,author_id,text,hearts,created_at)').order('created_at', { ascending: false }),
@@ -125,7 +137,7 @@ export async function getDiscussionData(): Promise<DiscussionData> {
     const author = displays.get(row.author_id) ?? anonymousDisplay()
     return { id: row.id, initials: author.initials, name: author.name, timestamp: relativeTime(row.created_at), text: row.text, hearts: row.hearts }
   })
-  return { prompt: topic?.prompt ?? 'What has stayed with you this week?', entries, peopleCount: new Set(authorRows.map(row => row.author_id)).size }
+  return { prompt: topic?.prompt ?? DEFAULT_DISCUSSION_PROMPT, entries, peopleCount: new Set(authorRows.map(row => row.author_id)).size }
 }
 
 export async function getProfile(): Promise<Profile | undefined> {
