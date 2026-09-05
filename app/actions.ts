@@ -28,22 +28,26 @@ export async function signInWithIdentifier(identifier: string, password: string)
   // server action. The service-role client is used ONLY for the
   // resolve_username_email lookup and never signs a user in.
   const supabase = await createClient()
-  async function attempt(email: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  console.error(`[signInDebug] enter identifier=${JSON.stringify(value)} passwordLength=${password?.length ?? 0}`)
+  async function attempt(email: string, branch: 'email' | 'username' | 'dummy') {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    console.error(`[signInDebug] branch=${branch} email=${JSON.stringify(email)} lowerMatch=${JSON.stringify(value.toLowerCase() === email.toLowerCase())} error=`, error ? { message: error.message, code: error.code, status: error.status, name: error.name } : null)
     return error
   }
   if (EMAIL_PATTERN.test(value)) {
-    return { error: signInError(await attempt(value)) }
+    return { error: signInError(await attempt(value, 'email')) }
   }
-  const { data: email } = await createServiceClient().rpc('resolve_username_email', { p_username: value })
+  const rpc = await createServiceClient().rpc('resolve_username_email', { p_username: value })
+  console.error(`[signInDebug] rpc identifier=${JSON.stringify(value)} data=${JSON.stringify(rpc.data)} error=`, rpc.error ? { message: rpc.error.message, code: rpc.error.code } : null)
+  const { data: email } = rpc
   if (email && typeof email === 'string') {
-    return { error: signInError(await attempt(email)) }
+    return { error: signInError(await attempt(email, 'username')) }
   }
   // Timing-normalization fallback for an unresolvable username: burn one
   // throwaway sign-in attempt. GoTrue's unknown-email path returns without a
   // bcrypt compare, so this equalizes request-level timing but NOT bcrypt
   // cost; a fully equal approach would require a server-side hash burn.
-  await attempt(DUMMY_RESOLUTION_EMAIL)
+  await attempt(DUMMY_RESOLUTION_EMAIL, 'dummy')
   return { error: GENERIC_SIGN_IN_ERROR }
 }
 
