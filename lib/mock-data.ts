@@ -140,20 +140,29 @@ export async function getDiscussionData(): Promise<DiscussionData> {
   return { prompt: topic?.prompt ?? DEFAULT_DISCUSSION_PROMPT, entries, peopleCount: new Set(authorRows.map(row => row.author_id)).size }
 }
 
-export async function getProfile(): Promise<Profile | undefined> {
+export type ProfileResult =
+  | { status: 'anonymous' }
+  | { status: 'pending' }
+  | { status: 'ready'; profile: Profile }
+
+export async function getProfile(): Promise<ProfileResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return undefined
-  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since').eq('id', user.id).single()
+  if (!user) return { status: 'anonymous' }
+  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since').eq('id', user.id).maybeSingle()
   if (error) throw error
+  if (!data) return { status: 'pending' }
   const [{ count: thoughts }, { count: prayers }] = await Promise.all([
     supabase.from('insights').select('*', { count: 'exact', head: true }).eq('author_id', user.id),
     supabase.from('prayer_confirmations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
   return {
-    initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline,
-    stats: [{ value: 0, label: 'LESSONS' }, { value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
-    links: [{ id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' }, { id: 'my-reflections', label: 'My reflections', icon: 'feather' }, { id: 'reading-settings', label: 'Reading settings', icon: 'compass' }],
+    status: 'ready',
+    profile: {
+      initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline,
+      stats: [{ value: 0, label: 'LESSONS' }, { value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
+      links: [{ id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' }, { id: 'my-reflections', label: 'My reflections', icon: 'feather' }, { id: 'reading-settings', label: 'Reading settings', icon: 'compass' }],
+    },
   }
 }
 
