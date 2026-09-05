@@ -18,3 +18,12 @@ node_modules
 out
 *.tsbuildinfo
 .DS_Store
+
+# Supabase local development state & temporary files
+supabase/.branches
+supabase/.temp
+supabase/functions/.env
+
+# Local database data (if generated locally)
+.branches/
+.temp/
