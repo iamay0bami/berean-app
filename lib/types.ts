@@ -83,6 +83,23 @@ export interface Profile {
   memberSince: string
   name: string
   tagline: string
+  role: AppRole
   stats: ProfileStat[]
   links: ProfileLink[]
+}
+
+export type AppRole = 'member' | 'class_leader' | 'admin'
+
+export interface ActiveClass {
+  id: string
+  name: string
+}
+
+export interface AdminMember {
+  id: string
+  email: string | null
+  name: string
+  username: string | null
+  role: AppRole
+  assigned_class_id: string | null
 }

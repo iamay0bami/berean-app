@@ -1,4 +1,4 @@
-import type { DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminMember, AppRole, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 
 type Display = { id: string; name: string; initials: string }
@@ -40,6 +40,28 @@ export async function getViewerRole(): Promise<ViewerRole> {
   const { data, error } = await supabase.rpc('current_role')
   if (error) throw error
   return data === 'admin' || data === 'class_leader' ? 'leader' : 'visitor'
+}
+
+export async function getCurrentRole(): Promise<AppRole | null> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return null
+  const { data, error } = await supabase.rpc('current_role')
+  if (error) throw error
+  return data as AppRole | null
+}
+
+export async function getActiveClasses(): Promise<ActiveClass[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('classes').select('id,name').eq('active', true).order('name')
+  if (error) throw error
+  return (data ?? []) as ActiveClass[]
+}
+
+export async function getAdminMembers(): Promise<AdminMember[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('admin_list_members')
+  if (error) throw error
+  return (data ?? []) as AdminMember[]
 }
 
 function mapSermon(row: any): Sermon {
@@ -149,7 +171,7 @@ export async function getProfile(): Promise<ProfileResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'anonymous' }
-  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since').eq('id', user.id).maybeSingle()
+  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since,role').eq('id', user.id).maybeSingle()
   if (error) throw error
   if (!data) return { status: 'pending' }
   const [{ count: thoughts }, { count: prayers }] = await Promise.all([
@@ -159,7 +181,7 @@ export async function getProfile(): Promise<ProfileResult> {
   return {
     status: 'ready',
     profile: {
-      initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline,
+      initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline, role: data.role as AppRole,
       stats: [{ value: 0, label: 'LESSONS' }, { value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
       links: [{ id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' }, { id: 'my-reflections', label: 'My reflections', icon: 'feather' }, { id: 'reading-settings', label: 'Reading settings', icon: 'compass' }],
     },

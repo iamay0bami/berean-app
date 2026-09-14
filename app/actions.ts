@@ -215,8 +215,13 @@ export async function createDiscussionTopic(prompt: string, lessonId?: string, s
   revalidatePath('/discuss')
 }
 
-export async function assignUserRole(userId: string, role: 'member' | 'class_leader' | 'admin', classId?: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.rpc('assign_user_role', { target_user_id: userId, new_role: role, new_class_id: classId ?? null })
-  if (error) throw error
+export async function assignUserRole(userId: string, role: 'member' | 'class_leader' | 'admin', classId?: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.rpc('assign_user_role', { target_user_id: userId, new_role: role, new_class_id: classId ?? null })
+    if (error) return { error: error.message }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to save this role.' }
+  }
 }
