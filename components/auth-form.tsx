@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
 import { FormEvent, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { signInWithIdentifier } from '@/app/actions'
+import PasswordField from '@/components/password-field'
 
 const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,19}$/
 const USERNAME_FORMAT_ERROR = 'Usernames are 3–20 characters, start with a letter, and use only lowercase letters, numbers, and underscores.'
@@ -25,12 +25,11 @@ async function usernameCheck(value: string): Promise<{ ok: boolean; note: Userna
   return { ok: false, note: { message: 'That username is already taken.', kind: 'error' } }
 }
 
-export default function AuthForm({ mode, next }: { mode: 'sign-in' | 'sign-up'; next?: string }) {
+export default function AuthForm({ mode, next, notice }: { mode: 'sign-in' | 'sign-up'; next?: string; notice?: string }) {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [usernameNote, setUsernameNote] = useState<UsernameNote>({ message: '', kind: null })
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -81,5 +80,5 @@ export default function AuthForm({ mode, next }: { mode: 'sign-in' | 'sign-up'; 
     window.location.assign('/home')
   }
 
-  return <main className="page-wrap auth-page"><div className="auth-card paper-card"><span className="brand-glyph">B</span><h1>{mode === 'sign-in' ? <>Welcome<br /><em>back.</em></> : <>Make room<br /><em>to listen.</em></>}</h1><p>{mode === 'sign-in' ? 'Sign in to continue your formation.' : 'Create your Berean account with email.'}</p><form onSubmit={submit}>{mode === 'sign-up' && <><input required value={name} onChange={event => setName(event.target.value)} placeholder="Name" autoComplete="name" /><input value={username} onChange={event => { latestUsername.current = event.target.value; setUsername(event.target.value); setUsernameNote({ message: '', kind: null }) }} onBlur={handleUsernameBlur} placeholder="Username (optional)" autoComplete="username" />{usernameNote.message && <p className={`field-message ${usernameNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{usernameNote.message}</p>}</>}<input required type={mode === 'sign-in' ? 'text' : 'email'} value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder={mode === 'sign-in' ? 'Email or username' : 'Email'} autoComplete={mode === 'sign-in' ? 'username' : 'email'} /><div className="password-field"><input required minLength={6} type={showPassword ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} placeholder="Password" autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} /><button type="button" className="password-toggle" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div><button className="primary-button" disabled={busy}>{busy ? 'Working...' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button></form>{message && <p role="status">{message}</p>}<p>{mode === 'sign-in' ? 'New here? ' : 'Already have an account? '}<Link className="text-action" href={mode === 'sign-in' ? '/auth/sign-up' : '/auth/sign-in'}>{mode === 'sign-in' ? 'Create an account' : 'Sign in'}</Link></p></div></main>
+  return <main className="page-wrap auth-page"><div className="auth-card paper-card"><span className="brand-glyph">B</span><h1>{mode === 'sign-in' ? <>Welcome<br /><em>back.</em></> : <>Make room<br /><em>to listen.</em></>}</h1><p>{mode === 'sign-in' ? 'Sign in to continue your formation.' : 'Create your Berean account with email.'}</p><form onSubmit={submit}>{mode === 'sign-up' && <><input required value={name} onChange={event => setName(event.target.value)} placeholder="Name" autoComplete="name" /><input value={username} onChange={event => { latestUsername.current = event.target.value; setUsername(event.target.value); setUsernameNote({ message: '', kind: null }) }} onBlur={handleUsernameBlur} placeholder="Username (optional)" autoComplete="username" />{usernameNote.message && <p className={`field-message ${usernameNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{usernameNote.message}</p>}</>}<input required type={mode === 'sign-in' ? 'text' : 'email'} value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder={mode === 'sign-in' ? 'Email or username' : 'Email'} autoComplete={mode === 'sign-in' ? 'username' : 'email'} /><PasswordField value={password} onChange={setPassword} placeholder="Password" autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} />{mode === 'sign-in' && <p><Link className="small-link" href="/auth/forgot-password">Forgot password?</Link></p>}<button className="primary-button" disabled={busy}>{busy ? 'Working...' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button></form>{notice && <p role="status">{notice}</p>}{message && <p role="status">{message}</p>}<p>{mode === 'sign-in' ? 'New here? ' : 'Already have an account? '}<Link className="text-action" href={mode === 'sign-in' ? '/auth/sign-up' : '/auth/sign-in'}>{mode === 'sign-in' ? 'Create an account' : 'Sign in'}</Link></p></div></main>
 }
