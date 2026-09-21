@@ -15,7 +15,10 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const privatePath = request.nextUrl.pathname === '/profile' || request.nextUrl.pathname.startsWith('/discuss')
+  // Org-scoped RLS means a signed-out visitor resolves to no organization and would
+  // otherwise see empty content lists, so these paths now require a session too.
+  const privatePaths = ['/profile', '/discuss', '/home', '/classes', '/sermons']
+  const privatePath = privatePaths.some(path => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))
   if (privatePath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/sign-in'
@@ -26,5 +29,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/discuss/:path*'],
+  matcher: ['/profile/:path*', '/discuss/:path*', '/home/:path*', '/classes/:path*', '/sermons/:path*'],
 }
