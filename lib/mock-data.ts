@@ -64,6 +64,13 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
   return (data ?? []) as AdminMember[]
 }
 
+export async function getOrgInviteCode(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_org_invite_code')
+  if (error) throw error
+  return (data as string | null) ?? null
+}
+
 function mapSermon(row: any): Sermon {
   const date = new Date(`${row.date}T00:00:00`)
   return {

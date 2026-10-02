@@ -225,3 +225,15 @@ export async function assignUserRole(userId: string, role: 'member' | 'class_lea
     return { error: cause instanceof Error ? cause.message : 'Unable to save this role.' }
   }
 }
+
+export async function createOrgInviteCode(): Promise<{ error: string | null; code: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.rpc('create_org_invite_code')
+    if (error) return { error: error.message, code: null }
+    revalidatePath('/admin/invite')
+    return { error: null, code: typeof data === 'string' ? data : null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to generate an invite code.', code: null }
+  }
+}

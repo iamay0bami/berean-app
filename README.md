@@ -168,6 +168,9 @@ Content, membership, and community tables live in the `public` schema. Enums: `a
 - `resolve_username_email(text)` — service-role-only username → email lookup for sign-in.
 - `username_available(text)` — availability check for sign-up.
 - `admin_list_members()` — admin-only member listing for the role-management screen.
+- `create_org_invite_code()` — admin-only; upserts and returns the organization's current invite code.
+- `get_org_invite_code()` — admin-only read path for that code (`org_invite_codes` itself is unreadable by clients).
+- `org_invite_code_valid(text)` — anon-callable check used to validate an invite code before sign-up.
 - `protect_author` / `protect_creator` — triggers that keep authorship and creator columns immutable.
 
 ---
