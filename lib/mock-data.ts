@@ -1,4 +1,4 @@
-import type { ActiveClass, AdminMember, AppRole, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminMember, AppRole, ClassLeader, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 
 type Display = { id: string; name: string; initials: string }
@@ -71,6 +71,13 @@ export async function getOrgInviteCode(): Promise<string | null> {
   return (data as string | null) ?? null
 }
 
+export async function getClassLeaders(): Promise<ClassLeader[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_class_leaders')
+  if (error) throw error
+  return (data ?? []) as ClassLeader[]
+}
+
 function mapSermon(row: any): Sermon {
   const date = new Date(`${row.date}T00:00:00`)
   return {
@@ -97,7 +104,7 @@ async function mapLesson(row: any): Promise<Lesson> {
   })
   return {
     id: row.id, week: row.week, number: row.number, title: row.title, excerpt: row.excerpt,
-    duration: row.duration, progress: row.progress, track: row.track, sectionLabel: row.section_label,
+    duration: row.duration, progress: row.progress, sectionLabel: row.section_label,
     quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [], marginNote: row.margin_note,
     questions: (row.questions ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((question: any) => ({ id: question.id, text: question.text })),
     thoughts,

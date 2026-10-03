@@ -20,7 +20,6 @@ export interface Lesson {
   excerpt: string
   duration: string
   progress: number
-  track: 'foundations' | 'deeper'
   sectionLabel: string
   quote: string
   reference: string
@@ -93,6 +92,13 @@ export type AppRole = 'member' | 'class_leader' | 'admin'
 export interface ActiveClass {
   id: string
   name: string
+}
+
+export interface ClassLeader {
+  class_id: string
+  leader_id: string
+  leader_name: string
+  leader_initials: string
 }
 
 export interface AdminMember {

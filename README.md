@@ -48,7 +48,7 @@ It is designed to feel less like a social feed and more like a quiet reading roo
 ## Features
 
 - **Home dashboard** — a personalized landing page with a "continue reading" card, the week's sermon tile, a community discussion tile, and a prayer-corner preview. Empty states adapt to whether the viewer is a leader (who may still have drafts) or a visitor. See `components/home-view.tsx`.
-- **Classes & tracks** — the lesson library is split into **Foundations** and **Going Deeper** tracks, with per-lesson progress indicators and clear empty states. See `components/classes-view.tsx`.
+- **Classes & lessons** — a flat lesson library with per-lesson progress indicators and clear empty states. Lessons are scoped to a class and visible only to that class's members. See `components/classes-view.tsx`.
 - **Lesson reading** — a focused reading view with a scroll-driven progress ribbon, a "thought to carry" margin note, tappable reflection questions, and "From the room" insights from classmates. See `components/lesson-reading.tsx`.
 - **Sermons & prayer** — published sermon notes with a detail reading view, plus a prayer-point list with "N people are praying" confirmations. See `components/sermons-view.tsx` and `components/sermon-reading.tsx`.
 - **Discussions** — a weekly prompt and a feed of shared thoughts. The schema also supports threaded replies. See `components/discussion-view.tsx`.
@@ -137,7 +137,7 @@ Content, membership, and community tables live in the `public` schema. Enums: `a
 | Table | Purpose |
 | --- | --- |
 | `classes` | A discipleship class; lessons belong to a class. |
-| `lessons` | A lesson, its reading copy, quote/reference, track (`foundations`/`deeper`), and status. |
+| `lessons` | A lesson, its reading copy, quote/reference, and status. |
 | `questions` | Reflection questions attached to a lesson, ordered by `sort_order`. |
 | `sermons` | Sermon notes with date, speaker, paragraphs, margin note, and status. |
 | `discussion_topics` | A weekly discussion prompt, optionally linked to a lesson or sermon (not both). |
@@ -147,6 +147,7 @@ Content, membership, and community tables live in the `public` schema. Enums: `a
 | Table | Purpose |
 | --- | --- |
 | `profiles` | One row per auth user: display name, initials, tagline, `member_since`, `role`, `username`, and `assigned_class_id`. |
+| `class_memberships` | Join table placing a profile in a class. Reachable only through SECURITY DEFINER functions — no direct grants. |
 
 **Community**
 

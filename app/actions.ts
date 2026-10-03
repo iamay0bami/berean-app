@@ -156,7 +156,7 @@ export async function signOut() {
 
 export type LessonInput = {
   id: string; class_id: string; week: string; number: string; title: string; excerpt: string; duration: string
-  track: 'foundations' | 'deeper'; section_label: string; quote: string; reference: string; paragraphs: string[]; margin_note: string
+  section_label: string; quote: string; reference: string; paragraphs: string[]; margin_note: string
 }
 
 export async function createLesson(input: LessonInput) {
@@ -235,5 +235,74 @@ export async function createOrgInviteCode(): Promise<{ error: string | null; cod
     return { error: null, code: typeof data === 'string' ? data : null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to generate an invite code.', code: null }
+  }
+}
+
+const CLASS_SLUG_FALLBACK = 'class'
+
+// JS twin of handle_new_user()'s `regexp_replace(lower(org_name), '[^a-z0-9]+', '-', 'g')`.
+function classSlug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || CLASS_SLUG_FALLBACK
+}
+
+function randomSuffix() {
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
+}
+
+// Classes are created by an admin; classes_admin_write (0006) enforces that, and
+// classes.organization_id defaults to current_organization_id(). There is no admin UI
+// for these yet — they are validated from a signed-in session, so failures are returned
+// rather than thrown (Next.js redacts thrown Server Action messages in production).
+export async function createClass(name: string): Promise<{ error: string | null; id: string | null }> {
+  const trimmed = name.trim()
+  if (!trimmed) return { error: 'A class name is required.', id: null }
+  try {
+    const { supabase } = await userClient()
+    const baseSlug = classSlug(trimmed)
+    let candidate = baseSlug.slice(0, 60)
+    // Ports handle_new_user()'s org-slug retry loop exactly: on collision, retry with a
+    // random suffix (53 + '-' + 6 = the same 60-char ceiling), capped at 5 attempts.
+    // Postgres' `on conflict do nothing returning id` has no app-side analogue, so a
+    // 23505 unique violation is the retry signal.
+    for (let attempts = 0; attempts <= 5; attempts++) {
+      const { data, error } = await supabase.from('classes').insert({ id: candidate, name: trimmed }).select('id').maybeSingle()
+      if (!error) {
+        revalidatePath('/admin/members')
+        return { error: null, id: (data as { id: string } | null)?.id ?? candidate }
+      }
+      if (error.code !== '23505') return { error: error.message, id: null }
+      candidate = `${baseSlug.slice(0, 53)}-${randomSuffix()}`
+    }
+    return { error: 'Could not create class.', id: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to create a class.', id: null }
+  }
+}
+
+export async function updateClass(id: string, name: string): Promise<{ error: string | null }> {
+  const trimmed = name.trim()
+  if (!trimmed) return { error: 'A class name is required.' }
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.from('classes').update({ name: trimmed, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/admin/members')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this class.' }
+  }
+}
+
+// Soft delete: classes.active drives classes_member_read, so deactivating hides the
+// class from members while leaving its lessons and memberships intact.
+export async function deactivateClass(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.from('classes').update({ active: false, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/admin/members')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to deactivate this class.' }
   }
 }
