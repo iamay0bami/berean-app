@@ -92,6 +92,7 @@ export type AppRole = 'member' | 'class_leader' | 'admin'
 export interface ActiveClass {
   id: string
   name: string
+  description: string | null
 }
 
 export interface ClassLeader {

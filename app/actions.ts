@@ -249,11 +249,19 @@ function randomSuffix() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
 }
 
+// classes.description is nullable with no default, and the member-facing /classes view
+// omits the paragraph on null/empty — so collapse whitespace-only input to SQL NULL
+// rather than storing an empty string that reads the same but is a different value.
+function normalizeDescription(description?: string) {
+  const trimmed = description?.trim()
+  return trimmed ? trimmed : null
+}
+
 // Classes are created by an admin; classes_admin_write (0006) enforces that, and
 // classes.organization_id defaults to current_organization_id(). There is no admin UI
 // for these yet — they are validated from a signed-in session, so failures are returned
 // rather than thrown (Next.js redacts thrown Server Action messages in production).
-export async function createClass(name: string): Promise<{ error: string | null; id: string | null }> {
+export async function createClass(name: string, description?: string): Promise<{ error: string | null; id: string | null }> {
   const trimmed = name.trim()
   if (!trimmed) return { error: 'A class name is required.', id: null }
   try {
@@ -265,9 +273,10 @@ export async function createClass(name: string): Promise<{ error: string | null;
     // Postgres' `on conflict do nothing returning id` has no app-side analogue, so a
     // 23505 unique violation is the retry signal.
     for (let attempts = 0; attempts <= 5; attempts++) {
-      const { data, error } = await supabase.from('classes').insert({ id: candidate, name: trimmed }).select('id').maybeSingle()
+      const { data, error } = await supabase.from('classes').insert({ id: candidate, name: trimmed, description: normalizeDescription(description) }).select('id').maybeSingle()
       if (!error) {
         revalidatePath('/admin/members')
+        revalidatePath('/classes')
         return { error: null, id: (data as { id: string } | null)?.id ?? candidate }
       }
       if (error.code !== '23505') return { error: error.message, id: null }
@@ -279,14 +288,15 @@ export async function createClass(name: string): Promise<{ error: string | null;
   }
 }
 
-export async function updateClass(id: string, name: string): Promise<{ error: string | null }> {
+export async function updateClass(id: string, name: string, description?: string): Promise<{ error: string | null }> {
   const trimmed = name.trim()
   if (!trimmed) return { error: 'A class name is required.' }
   try {
     const { supabase } = await userClient()
-    const { error } = await supabase.from('classes').update({ name: trimmed, updated_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('classes').update({ name: trimmed, description: normalizeDescription(description), updated_at: new Date().toISOString() }).eq('id', id)
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
+    revalidatePath('/classes')
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to update this class.' }

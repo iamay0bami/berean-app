@@ -52,9 +52,19 @@ export async function getCurrentRole(): Promise<AppRole | null> {
 
 export async function getActiveClasses(): Promise<ActiveClass[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('classes').select('id,name').eq('active', true).order('name')
+  const { data, error } = await supabase.from('classes').select('id,name,description').eq('active', true).order('name')
   if (error) throw error
   return (data ?? []) as ActiveClass[]
+}
+
+// The caller's own memberships. get_my_classes() (0008) returns (id, name) only — it has
+// no description column — so the return type is narrowed rather than claiming a field
+// this path cannot supply.
+export async function getMyClasses(): Promise<Pick<ActiveClass, 'id' | 'name'>[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_my_classes')
+  if (error) throw error
+  return (data ?? []) as Pick<ActiveClass, 'id' | 'name'>[]
 }
 
 export async function getAdminMembers(): Promise<AdminMember[]> {
