@@ -102,6 +102,24 @@ export interface ClassLeader {
   leader_initials: string
 }
 
+// Admin-side class row: ActiveClass plus the active flag. Unlike getActiveClasses(),
+// getAdminClasses() returns deactivated rows too — classes_member_read (0006) already
+// permits an admin to select them.
+export interface AdminClass {
+  id: string
+  name: string
+  description: string | null
+  active: boolean
+}
+
+// get_class_members() (0008) returns exactly (id, name, initials) — a lean roster row,
+// not an AdminMember (which carries email/username/role and has no initials column).
+export interface ClassMember {
+  id: string
+  name: string
+  initials: string
+}
+
 export interface AdminMember {
   id: string
   email: string | null

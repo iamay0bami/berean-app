@@ -1,4 +1,4 @@
-import type { ActiveClass, AdminMember, AppRole, ClassLeader, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminClass, AdminMember, AppRole, ClassLeader, ClassMember, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 
 type Display = { id: string; name: string; initials: string }
@@ -57,6 +57,18 @@ export async function getActiveClasses(): Promise<ActiveClass[]> {
   return (data ?? []) as ActiveClass[]
 }
 
+// Deliberately separate from getActiveClasses() rather than a widening of it: that function
+// feeds the member-facing "Other classes" list and the class-leader dropdown, neither of which
+// should ever show a deactivated class. An admin managing classes needs both states, and
+// classes_member_read (0006) already allows an admin to select inactive rows — so this is
+// purely an app-side filter difference, not a permissions one.
+export async function getAdminClasses(): Promise<AdminClass[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('classes').select('id,name,description,active').order('name')
+  if (error) throw error
+  return (data ?? []) as AdminClass[]
+}
+
 // The caller's own memberships. get_my_classes() (0008) returns (id, name) only — it has
 // no description column — so the return type is narrowed rather than claiming a field
 // this path cannot supply.
@@ -72,6 +84,16 @@ export async function getAdminMembers(): Promise<AdminMember[]> {
   const { data, error } = await supabase.rpc('admin_list_members')
   if (error) throw error
   return (data ?? []) as AdminMember[]
+}
+
+// get_class_members() guards on admin-or-that-class's-leader and returns (id, name, initials)
+// only — never join profiles directly for another user, member_display()/this RPC is the
+// sanctioned path. The param is `target_class_id`, a text slug, not a uuid.
+export async function getClassMembers(classId: string): Promise<ClassMember[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_class_members', { target_class_id: classId })
+  if (error) throw error
+  return (data ?? []) as ClassMember[]
 }
 
 export async function getOrgInviteCode(): Promise<string | null> {

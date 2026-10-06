@@ -276,6 +276,7 @@ export async function createClass(name: string, description?: string): Promise<{
       const { data, error } = await supabase.from('classes').insert({ id: candidate, name: trimmed, description: normalizeDescription(description) }).select('id').maybeSingle()
       if (!error) {
         revalidatePath('/admin/members')
+        revalidatePath('/admin/classes')
         revalidatePath('/classes')
         return { error: null, id: (data as { id: string } | null)?.id ?? candidate }
       }
@@ -296,6 +297,7 @@ export async function updateClass(id: string, name: string, description?: string
     const { error } = await supabase.from('classes').update({ name: trimmed, description: normalizeDescription(description), updated_at: new Date().toISOString() }).eq('id', id)
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
+    revalidatePath('/admin/classes')
     revalidatePath('/classes')
     return { error: null }
   } catch (cause) {
@@ -311,8 +313,52 @@ export async function deactivateClass(id: string): Promise<{ error: string | nul
     const { error } = await supabase.from('classes').update({ active: false, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
+    revalidatePath('/admin/classes')
+    revalidatePath('/classes')
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to deactivate this class.' }
+  }
+}
+
+// Undoes deactivateClass. The class was never deleted, so reactivating restores it with its
+// lessons and memberships untouched.
+export async function activateClass(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.from('classes').update({ active: true, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/admin/members')
+    revalidatePath('/admin/classes')
+    revalidatePath('/classes')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to activate this class.' }
+  }
+}
+
+// Class membership. Both RPCs are SECURITY DEFINER and guard on admin-or-that-class's-leader;
+// class_memberships itself is revoked from every role, so these are the only write path.
+export async function assignClassMember(userId: string, classId: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.rpc('assign_class_membership', { target_user_id: userId, target_class_id: classId })
+    if (error) return { error: error.message }
+    revalidatePath('/admin/classes')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to add this member.' }
+  }
+}
+
+export async function removeClassMember(userId: string, classId: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.rpc('remove_class_membership', { target_user_id: userId, target_class_id: classId })
+    if (error) return { error: error.message }
+    revalidatePath('/admin/classes')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to remove this member.' }
   }
 }

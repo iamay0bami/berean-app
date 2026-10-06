@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 const items = [
   ['/admin/members', 'Members'],
   ['/admin/invite', 'Invite code'],
+  ['/admin/classes', 'Classes'],
 ] as const
 
 export default function AdminNav() {
