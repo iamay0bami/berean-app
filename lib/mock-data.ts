@@ -96,6 +96,35 @@ export async function getClassMembers(classId: string): Promise<ClassMember[]> {
   return (data ?? []) as ClassMember[]
 }
 
+// The complement of get_class_members(): org members with no row in class_memberships for
+// this class. Exists because the only other candidate source, admin_list_members(), is
+// is_admin()-gated and rejects a class_leader caller outright. Returns the identical
+// (id, name, initials) row, so ClassMember is reused rather than a parallel type.
+export async function getClassCandidates(classId: string): Promise<ClassMember[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_class_candidates', { target_class_id: classId })
+  if (error) throw error
+  return (data ?? []) as ClassMember[]
+}
+
+// 'none' is a leader with no assigned class; 'inactive' carries the name because the RPC is
+// the only path that can read a deactivated class at all. See 0009 for why the classes table
+// cannot supply this directly.
+export type LedClassResult =
+  | { status: 'none' }
+  | { status: 'inactive'; name: string }
+  | { status: 'ready'; class: ActiveClass }
+
+export async function getMyLedClass(): Promise<LedClassResult> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_my_led_class')
+  if (error) throw error
+  const row = (data ?? [])[0] as { id: string; name: string; description: string | null; active: boolean } | undefined
+  if (!row) return { status: 'none' }
+  if (!row.active) return { status: 'inactive', name: row.name }
+  return { status: 'ready', class: { id: row.id, name: row.name, description: row.description } }
+}
+
 export async function getOrgInviteCode(): Promise<string | null> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_org_invite_code')

@@ -345,6 +345,7 @@ export async function assignClassMember(userId: string, classId: string): Promis
     const { error } = await supabase.rpc('assign_class_membership', { target_user_id: userId, target_class_id: classId })
     if (error) return { error: error.message }
     revalidatePath('/admin/classes')
+    revalidatePath('/classes/manage')
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to add this member.' }
@@ -357,6 +358,7 @@ export async function removeClassMember(userId: string, classId: string): Promis
     const { error } = await supabase.rpc('remove_class_membership', { target_user_id: userId, target_class_id: classId })
     if (error) return { error: error.message }
     revalidatePath('/admin/classes')
+    revalidatePath('/classes/manage')
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to remove this member.' }
