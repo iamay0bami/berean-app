@@ -6,7 +6,7 @@ import { activateClass, assignClassMember, createClass, deactivateClass, removeC
 import AdminNav from '@/components/admin-nav'
 import { EmptyState } from '@/components/empty-state'
 import { Header, Meta } from '@/components/shared'
-import type { AdminClass, AdminMember, ClassMember } from '@/lib/types'
+import type { AdminClass, AdminMember, ClassLeader, ClassMember } from '@/lib/types'
 
 type Draft = { name: string; description: string }
 
@@ -22,7 +22,10 @@ function memberLabel(member: AdminMember) {
   return member.name || member.email || (member.username ? `@${member.username}` : 'Unnamed member')
 }
 
-export default function AdminClassesView({ classes, rosters, members }: { classes: AdminClass[]; rosters: Record<string, ClassMember[]>; members: AdminMember[] }) {
+export default function AdminClassesView({ classes, rosters, members, leaders }: { classes: AdminClass[]; rosters: Record<string, ClassMember[]>; members: AdminMember[]; leaders: ClassLeader[] }) {
+  // More than one class_leader profile may point at the same class, so collect names.
+  const leaderNames = new Map<string, string[]>()
+  leaders.forEach(leader => leaderNames.set(leader.class_id, [...(leaderNames.get(leader.class_id) ?? []), leader.leader_name]))
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => Object.fromEntries(classes.map(item => [item.id, { name: item.name, description: item.description ?? '' }])))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -96,8 +99,11 @@ export default function AdminClassesView({ classes, rosters, members }: { classe
       const expanded = expandedId === item.id
       const draft = drafts[item.id]
       const key = classKey(item.id)
+      const leadersForClass = leaderNames.get(item.id)
       return <article className="paper-card member-card" key={item.id}>
         <div className="member-card-head"><h2>{item.name}</h2><span className={`status-badge ${item.active ? 'active' : 'inactive'}`}>{item.active ? 'Active' : 'Inactive'}</span></div>
+
+        {leadersForClass?.length ? <Meta>Led by {leadersForClass.join(', ')}</Meta> : null}
 
         {editingId === item.id
           ? <><label className="member-control"><Meta>Name</Meta><input value={draft.name} onChange={event => setDrafts(current => ({ ...current, [item.id]: { ...current[item.id], name: event.target.value } }))} /></label><label className="member-control"><Meta>Description</Meta><textarea value={draft.description} onChange={event => setDrafts(current => ({ ...current, [item.id]: { ...current[item.id], description: event.target.value } }))} /></label></>
