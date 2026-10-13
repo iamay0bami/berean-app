@@ -1,4 +1,4 @@
-import type { ActiveClass, AdminClass, AdminMember, AppRole, ClassLeader, ClassMember, DiscussionData, DiscussionEntry, Lesson, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassLeader, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, Lesson, LessonEdit, LessonEditQuestion, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 
 type Display = { id: string; name: string; initials: string }
@@ -190,6 +190,52 @@ export async function getLesson(id: string) {
   const { data, error } = await supabase.from('lessons').select(select).eq('id', id).maybeSingle()
   if (error) throw error
   return data ? mapLesson(data) : undefined
+}
+
+// Authoring list: every status, drafts included. The member-facing getLessons() above is
+// published-only and stays that way.
+//
+// RLS is NOT sufficient to scope this for a leader, which is why the class id is passed
+// explicitly. class_memberships carries no role restriction, so a class_leader can also
+// be a plain member of another class — and lessons_member_read (0008) would then hand
+// back that class's published lessons as though the leader could author them. A leader
+// caller therefore always passes its led class id; only an admin omits it.
+export async function getAuthorLessons(classId?: string): Promise<AuthorLesson[]> {
+  const supabase = await createClient()
+  const query = supabase.from('lessons').select('id,class_id,week,number,title,status')
+  const { data, error } = await (classId ? query.eq('class_id', classId) : query).order('number')
+  if (error) throw error
+  return (data ?? []) as AuthorLesson[]
+}
+
+// The authoring form's read: every editable field, plus each question's id, order and
+// insight count. Undefined when RLS hides the row entirely (another class's draft).
+//
+// It still returns a row for a PUBLISHED lesson of a class the caller merely belongs to,
+// because a leader who is also a plain member of another class passes
+// lessons_member_read. RLS cannot express "can write", so the caller must compare
+// class_id against the led class and 404 on a mismatch.
+export async function getLessonForEdit(id: string): Promise<LessonEdit | undefined> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('id,class_id,week,number,title,excerpt,duration,section_label,quote,reference,paragraphs,margin_note,status,questions(id,text,sort_order,insights(count))')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return undefined
+  const row = data as any
+  // insights(count) rides along the embed; anything else would need a second round trip
+  // per question just to warn before a removal.
+  const questions: LessonEditQuestion[] = ((row.questions ?? []) as any[])
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map(question => ({ id: question.id, text: question.text, insightCount: question.insights?.[0]?.count ?? 0 }))
+  return {
+    id: row.id, class_id: row.class_id, week: row.week, number: row.number, title: row.title,
+    excerpt: row.excerpt, duration: row.duration, section_label: row.section_label,
+    quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [],
+    margin_note: row.margin_note, status: row.status as ContentStatus, questions,
+  }
 }
 
 export async function getSermons() {

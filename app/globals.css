@@ -52,3 +52,11 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 500;
 .profile-admin-links { display: grid; gap: 10px; }
 .auth-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .auth-card .auth-confirm { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; }.auth-card .auth-confirm input[type='checkbox'] { width: auto; flex: 0 0 auto; margin: 2px 0 0; padding: 0; accent-color: var(--gold); }
+.status-badge.draft { color: var(--brick); }.status-badge.published { color: var(--sage); }
+.class-form .body-field { min-height: 240px; }
+.class-form-actions .outline-button { width: auto; }
+a.primary-button { text-decoration: none; }
+.page-intro .primary-button { margin-top: 20px; }
+.question-repeater { display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
+.question-row { display: grid; gap: 6px; border-left: 2px solid var(--line); padding-left: 12px; }
+.question-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }.question-row-actions .text-action { font-size: 12px; }

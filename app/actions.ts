@@ -154,37 +154,229 @@ export async function signOut() {
   await supabase.auth.signOut()
 }
 
+const CLASS_SLUG_FALLBACK = 'class'
+const LESSON_SLUG_FALLBACK = 'lesson'
+
+// An UPDATE or DELETE filtered out by RLS returns NO error and affects zero rows —
+// PostgREST reports the silence as success. Every lesson write therefore chains
+// .select('id') and checks the row count, or a caller who can read a lesson but not
+// write it would see "Saved" while nothing changed. Do not remove these guards.
+const WRITE_DENIED = "You can't change this lesson."
+const WRITE_DENIED_QUESTIONS = "You can't change this lesson's questions."
+
+// Static routes that sit beside a dynamic segment, so a slug equal to one of them would
+// be shadowed by the static page and become unreachable:
+//   manage -> /classes/manage         (the leader's class page, not the lesson)
+//   new    -> /author/lessons/new     (the create form, so the lesson could never be edited)
+// Lesson ids come from author-typed titles, so this is reachable by typing "Manage" or
+// "New". Add an entry here whenever a new static route appears beside a dynamic one.
+const RESERVED_SLUGS = new Set(['new', 'manage'])
+
+// JS twin of handle_new_user()'s `regexp_replace(lower(org_name), '[^a-z0-9]+', '-', 'g')`.
+function slugify(value: string, fallback: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || fallback
+}
+
+function randomSuffix() {
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
+}
+
+// Every lesson write refreshes the authoring list, the member-facing routes, and /home —
+// getHomeData() features lessons[0], so publishing can change what the home page shows.
+function revalidateLessonPaths(id: string) {
+  revalidatePath('/author/lessons')
+  revalidatePath(`/author/lessons/${id}`)
+  revalidatePath('/classes')
+  revalidatePath(`/classes/${id}`)
+  revalidatePath('/home')
+}
+
 export type LessonInput = {
-  id: string; class_id: string; week: string; number: string; title: string; excerpt: string; duration: string
+  class_id: string; week: string; number: string; title: string; excerpt: string; duration: string
   section_label: string; quote: string; reference: string; paragraphs: string[]; margin_note: string
 }
 
-export async function createLesson(input: LessonInput) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('lessons').insert({ ...input, created_by: user.id, status: 'draft' })
-  if (error) throw error
-  revalidatePath('/classes')
+// Shared by createLesson and updateLesson so the two can never drift. updateLesson takes
+// the full LessonInput, not a Partial, precisely so this can promise the required fields.
+//
+// lessons has no nullable text column — excerpt, duration, section_label, quote,
+// reference and margin_note are all `not null default ''` (0001) — so a blank optional
+// field is stored as '' and there is no null-vs-'' decision to make. That is the
+// opposite of classes.description, which is nullable and normalised to null.
+function validateLessonInput(input: LessonInput): { error: string } | { error: null; fields: LessonInput } {
+  const classId = input.class_id.trim()
+  if (!classId) return { error: 'A class is required.' }
+  const title = input.title.trim()
+  if (!title) return { error: 'A title is required.' }
+  const week = input.week.trim()
+  if (!week) return { error: 'A week is required.' }
+  const number = input.number.trim()
+  if (!number) return { error: 'A lesson number is required.' }
+  // lessons.number is text and the list orders by it, so anything but digits sorts
+  // wrongly and silently ("3a", "#3", "03 "). The form's number input already refuses
+  // letters; this guards the action boundary.
+  if (!/^\d+$/.test(number)) return { error: 'The lesson number must be digits only.' }
+  const paragraphs = input.paragraphs.map(part => part.trim()).filter(Boolean)
+  if (!paragraphs.length) return { error: 'At least one paragraph is required.' }
+  return {
+    error: null,
+    fields: {
+      class_id: classId,
+      week,
+      number: number.padStart(2, '0'),
+      title,
+      excerpt: input.excerpt.trim(),
+      duration: input.duration.trim(),
+      section_label: input.section_label.trim(),
+      quote: input.quote.trim(),
+      reference: input.reference.trim(),
+      paragraphs,
+      margin_note: input.margin_note.trim(),
+    },
+  }
 }
 
-export async function updateLesson(id: string, input: Partial<Omit<LessonInput, 'id'>>) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('lessons').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
-  revalidatePath(`/classes/${id}`)
+// Lesson ids are slugs of the title, not caller-supplied: lessons.id is a plain text
+// primary key with no default, the same shape classes.id already has. The loop ports
+// createClass's exactly — on a 23505 collision retry with a random suffix (53 + '-' + 6
+// = the same 60-char ceiling), capped at 5 attempts. Ids are unique globally rather than
+// per class, so two classes may not both hold a lesson titled "Grace".
+//
+// created_by is NOT NULL with no default and lessons_leader_insert requires it to equal
+// auth.uid(), so the insert must send it. Only 23505 retries, so an RLS denial on INSERT
+// (which does raise, unlike UPDATE/DELETE) returns its message instead of being misread
+// as a collision.
+export async function createLesson(input: LessonInput): Promise<{ error: string | null; id: string | null }> {
+  try {
+    const checked = validateLessonInput(input)
+    if (checked.error !== null) return { error: checked.error, id: null }
+    const { supabase, user } = await userClient()
+    const baseSlug = slugify(checked.fields.title, LESSON_SLUG_FALLBACK)
+    // A reserved slug skips the bare attempt entirely, so "New" is stored as new-a1b2c3
+    // rather than being tried as `new` and shadowed by /author/lessons/new.
+    let candidate = RESERVED_SLUGS.has(baseSlug) ? `${baseSlug.slice(0, 53)}-${randomSuffix()}` : baseSlug.slice(0, 60)
+    for (let attempts = 0; attempts <= 5; attempts++) {
+      const { data, error } = await supabase
+        .from('lessons')
+        .insert({ ...checked.fields, id: candidate, created_by: user.id, status: 'draft' })
+        .select('id')
+        .maybeSingle()
+      if (!error) {
+        const id = (data as { id: string } | null)?.id ?? candidate
+        revalidateLessonPaths(id)
+        return { error: null, id }
+      }
+      if (error.code !== '23505') return { error: error.message, id: null }
+      candidate = `${baseSlug.slice(0, 53)}-${randomSuffix()}`
+    }
+    return { error: 'Could not create lesson.', id: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to create this lesson.', id: null }
+  }
 }
 
-export async function publishLesson(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('lessons').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
-  revalidatePath('/classes')
+// Editable fields only — status is deliberately absent, so "Save draft" can never
+// silently unpublish a published lesson. created_by is absent too: protect_creator
+// (0001) raises if it changes.
+export async function updateLesson(id: string, input: LessonInput): Promise<{ error: string | null }> {
+  try {
+    const checked = validateLessonInput(input)
+    if (checked.error !== null) return { error: checked.error }
+    const { supabase } = await userClient()
+    const { data, error } = await supabase
+      .from('lessons')
+      .update({ ...checked.fields, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED }
+    revalidateLessonPaths(id)
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this lesson.' }
+  }
 }
 
-export async function upsertQuestion(question: { id: string; lesson_id: string; text: string; sort_order?: number }) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('questions').upsert(question)
-  if (error) throw error
-  revalidatePath(`/classes/${question.lesson_id}`)
+// Status-only. .select('id') is the guard described above: without it a leader who can
+// read this lesson but not write it would get error === null and a success message.
+async function setLessonStatus(id: string, status: 'draft' | 'published'): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase
+      .from('lessons')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED }
+    revalidateLessonPaths(id)
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this lesson.' }
+  }
+}
+
+export async function publishLesson(id: string): Promise<{ error: string | null }> {
+  return setLessonStatus(id, 'published')
+}
+
+export async function unpublishLesson(id: string): Promise<{ error: string | null }> {
+  return setLessonStatus(id, 'draft')
+}
+
+// Existing ids are kept, new questions get `${lessonId}-q-${suffix}`, sort_order follows
+// array order, and questions absent from the array are deleted.
+//
+// Upsert first, delete second, returning the first error: a failed upsert must not be
+// followed by deletes, or a partial write silently loses questions.
+//
+// Deleting a question cannot delete an insight — insights.question_id is ON DELETE SET
+// NULL (0001), so the insight row survives, still attached to the lesson via lesson_id,
+// with question_id nulled. It is orphaned, never destroyed. lesson_id is CASCADE, but
+// that only fires on a lesson delete, which this function never performs.
+export async function saveLessonQuestions(lessonId: string, questions: { id?: string; text: string }[]): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data: existing, error: readError } = await supabase.from('questions').select('id').eq('lesson_id', lessonId)
+    if (readError) return { error: readError.message }
+    // This read is id bookkeeping only, NOT a permission check: questions_member_read
+    // (0006) admits any member to a published lesson's questions, so it succeeds for a
+    // caller who can read but cannot write. Write rights are proven by the row counts below.
+    const existingIds = new Set(((existing ?? []) as { id: string }[]).map(row => row.id))
+
+    const rows: { id: string; lesson_id: string; text: string; sort_order: number; updated_at: string }[] = []
+    const kept = new Set<string>()
+    const now = new Date().toISOString()
+    for (const question of questions) {
+      const text = question.text.trim()
+      // questions.text is NOT NULL with no default, and a blank row is not a question.
+      if (!text) continue
+      // An id we did not just read is treated as new, so an unknown or foreign id becomes
+      // a fresh row rather than a cross-lesson move of someone else's question.
+      const id = question.id && existingIds.has(question.id) ? question.id : `${lessonId}-q-${randomSuffix()}`
+      kept.add(id)
+      rows.push({ id, lesson_id: lessonId, text, sort_order: rows.length, updated_at: now })
+    }
+
+    if (rows.length) {
+      const { data, error } = await supabase.from('questions').upsert(rows).select('id')
+      if (error) return { error: error.message }
+      if ((data ?? []).length !== rows.length) return { error: WRITE_DENIED_QUESTIONS }
+    }
+
+    const removed = [...existingIds].filter(id => !kept.has(id))
+    // in() with an empty list is not a valid filter, so an empty removal is skipped.
+    if (removed.length) {
+      const { data, error } = await supabase.from('questions').delete().eq('lesson_id', lessonId).in('id', removed).select('id')
+      if (error) return { error: error.message }
+      if ((data ?? []).length !== removed.length) return { error: WRITE_DENIED_QUESTIONS }
+    }
+
+    revalidateLessonPaths(lessonId)
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to save these questions.' }
+  }
 }
 
 export async function createSermon(input: Record<string, unknown>) {
@@ -238,17 +430,6 @@ export async function createOrgInviteCode(): Promise<{ error: string | null; cod
   }
 }
 
-const CLASS_SLUG_FALLBACK = 'class'
-
-// JS twin of handle_new_user()'s `regexp_replace(lower(org_name), '[^a-z0-9]+', '-', 'g')`.
-function classSlug(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || CLASS_SLUG_FALLBACK
-}
-
-function randomSuffix() {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
-}
-
 // classes.description is nullable with no default, and the member-facing /classes view
 // omits the paragraph on null/empty — so collapse whitespace-only input to SQL NULL
 // rather than storing an empty string that reads the same but is a different value.
@@ -266,7 +447,7 @@ export async function createClass(name: string, description?: string): Promise<{
   if (!trimmed) return { error: 'A class name is required.', id: null }
   try {
     const { supabase } = await userClient()
-    const baseSlug = classSlug(trimmed)
+    const baseSlug = slugify(trimmed, CLASS_SLUG_FALLBACK)
     let candidate = baseSlug.slice(0, 60)
     // Ports handle_new_user()'s org-slug retry loop exactly: on collision, retry with a
     // random suffix (53 + '-' + 6 = the same 60-char ceiling), capped at 5 attempts.

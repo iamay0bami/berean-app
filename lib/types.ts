@@ -128,3 +128,46 @@ export interface AdminMember {
   role: AppRole
   assigned_class_id: string | null
 }
+
+export type ContentStatus = 'draft' | 'published'
+
+// Authoring-side types. Unlike Lesson (the camelCased reading-view shape built by
+// mapLesson), these are the raw column names the authoring reader selects, the same way
+// AdminMember keeps admin_list_members()' snake_case.
+//
+// getAuthorLessons() returns every status — drafts included — which is why it is a
+// separate reader from the published-only getLessons().
+export interface AuthorLesson {
+  id: string
+  class_id: string
+  week: string
+  number: string
+  title: string
+  status: ContentStatus
+}
+
+// Deliberately not a widening of LessonQuestion (which backs Lesson.questions for the
+// reading view and carries neither an order nor a count): insightCount is what lets the
+// form warn before removing a question someone has already written a thought against.
+export interface LessonEditQuestion {
+  id: string
+  text: string
+  insightCount: number
+}
+
+export interface LessonEdit {
+  id: string
+  class_id: string
+  week: string
+  number: string
+  title: string
+  excerpt: string
+  duration: string
+  section_label: string
+  quote: string
+  reference: string
+  paragraphs: string[]
+  margin_note: string
+  status: ContentStatus
+  questions: LessonEditQuestion[]
+}
