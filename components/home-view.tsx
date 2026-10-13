@@ -2,6 +2,7 @@ import { ArrowLeft, Bookmark, ChevronRight, Feather, MessageCircle, NotebookPen 
 import Link from 'next/link'
 import type { Lesson, PrayerPoint, Sermon } from '@/lib/types'
 import type { ViewerRole } from '@/lib/mock-data'
+import type { Greeting } from '@/lib/greeting'
 import { EmptyState } from '@/components/empty-state'
 import { Header, Meta } from '@/components/shared'
 
@@ -18,11 +19,11 @@ const emptyCopy: Record<ViewerRole, Record<'all' | 'lesson' | 'sermon', { title:
   },
 }
 
-export default function HomeView({ lesson, sermon, prayer, viewerRole }: { lesson?: Lesson; sermon?: Sermon; prayer: PrayerPoint; viewerRole: ViewerRole }) {
+export default function HomeView({ lesson, sermon, prayer, viewerRole, greeting, dateLabel }: { lesson?: Lesson; sermon?: Sermon; prayer: PrayerPoint; viewerRole: ViewerRole; greeting: Greeting; dateLabel: string }) {
   const copy = emptyCopy[viewerRole]
   const allEmpty = !lesson && !sermon
   return <div className="page-wrap"><Header /><main>
-    <section className="welcome"><Meta>SUNDAY, AUGUST 25</Meta><h1>Good morning,<br /><em>friend.</em></h1><p className="lede">A little room to listen, learn, and live the Word this week.</p></section>
+    <section className="welcome"><Meta>{dateLabel}</Meta><h1>{greeting.before ? <>{greeting.before}<br /></> : null}<em>{greeting.name}</em>{greeting.after ? <><br />{greeting.after}</> : null}</h1><p className="lede">A little room to listen, learn, and live the Word this week.</p></section>
     {allEmpty ? <EmptyState title={copy.all.title} body={copy.all.body} /> : <>
       {lesson ? <section className="continue-card paper-card"><div className="card-kicker"><Meta>CONTINUE READING</Meta><Bookmark size={17} fill="currentColor" /></div><div className="lesson-row"><div className="lesson-number">{lesson.number}</div><div className="lesson-info"><h2>{lesson.title}</h2><p>{lesson.duration}</p><div className="mini-progress"><span style={{ width: `${lesson.progress}%` }} /></div></div><ChevronRight size={21} /></div><Link className="text-action" href={`/classes/${lesson.id}`}>Open lesson <ArrowLeft size={15} className="rotate-180" /></Link></section>
         : <EmptyState eyebrow="CONTINUE READING" title={copy.lesson.title} body={copy.lesson.body} />}

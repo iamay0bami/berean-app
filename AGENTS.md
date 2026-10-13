@@ -49,9 +49,15 @@
 - Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
   `SUPABASE_SECRET_KEY` — this project uses Supabase's newer
   publishable/secret key pair, not the legacy anon/service_role names.
-- Time-of-day logic must use an explicit `Africa/Lagos` offset (e.g. via
-  `Intl.DateTimeFormat`), never raw server-local time — hosting
-  environments typically run UTC, and Nigeria has no DST.
+- Time-of-day logic must name its timezone explicitly via `Intl.DateTimeFormat`
+  — never raw server-local time, which is ambient and host-dependent. The
+  greeting and date on `/home` follow the *visitor's* zone, read from the
+  `x-vercel-ip-timezone` request header and passed through `safeTimeZone()`
+  (`lib/greeting.ts`), which falls back to UTC when the header is absent or
+  malformed. Use that helper for any new date/time display.
+- `Intl.DateTimeFormat` throws a `RangeError` on an unknown timezone. Any zone
+  derived from a request header must go through `safeTimeZone()` first —
+  uncaught, it takes down the whole page render.
 - `lucide-react` is pinned to an exact version (no caret) after a fresh
   npm release once shipped broken. Don't loosen this without checking the
   target version's package contents first.

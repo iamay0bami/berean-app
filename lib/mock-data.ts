@@ -33,13 +33,31 @@ function anonymousDisplay(): Display {
 const DEFAULT_DISCUSSION_PROMPT = 'What has stayed with you this week?'
 
 export type ViewerRole = 'leader' | 'visitor'
+export type Viewer = { role: ViewerRole; firstName: string | null }
 
-export async function getViewerRole(): Promise<ViewerRole> {
+// The first whitespace-delimited word of profiles.name, or null when the row is
+// missing or the name is blank. The 'friend' fallback belongs to the greeting, not here.
+function firstNameOf(name: string | null | undefined) {
+  return (name ?? '').trim().split(/\s+/)[0] || null
+}
+
+// Role and first name in one pass. This is the home page's only viewer read — the
+// profiles select is the caller's own row, which self+admin-read RLS permits and which
+// getProfile() below already does. It rides alongside the current_role RPC rather than
+// after it, so the extra column costs no extra round trip.
+export async function getViewer(): Promise<Viewer> {
   const { supabase, user } = await getSessionUser()
-  if (!user) return 'visitor'
-  const { data, error } = await supabase.rpc('current_role')
-  if (error) throw error
-  return data === 'admin' || data === 'class_leader' ? 'leader' : 'visitor'
+  if (!user) return { role: 'visitor', firstName: null }
+  const [{ data: role, error: roleError }, { data: profile, error: profileError }] = await Promise.all([
+    supabase.rpc('current_role'),
+    supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+  ])
+  if (roleError) throw roleError
+  if (profileError) throw profileError
+  return {
+    role: role === 'admin' || role === 'class_leader' ? 'leader' : 'visitor',
+    firstName: firstNameOf(profile?.name),
+  }
 }
 
 export async function getCurrentRole(): Promise<AppRole | null> {
