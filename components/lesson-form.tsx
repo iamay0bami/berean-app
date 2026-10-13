@@ -1,7 +1,7 @@
 'use client'
 
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { FormEvent, useRef, useState, useTransition } from 'react'
+import { FormEvent, MouseEvent, useRef, useState, useTransition } from 'react'
 import { createLesson, publishLesson, saveLessonQuestions, unpublishLesson, updateLesson } from '@/app/actions'
 import type { LessonInput } from '@/app/actions'
 import { Header, Meta } from '@/components/shared'
@@ -114,7 +114,12 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
     run('save', async () => ({ error: (await persist()).error }))
   }
 
-  function publish() {
+  function publish(event: MouseEvent<HTMLButtonElement>) {
+    // Publish and Unpublish are type="button", so native validation runs only for Save
+    // draft, the form's submit. Without this the confirm would fire on an empty form and
+    // the problem would surface as a server error instead of pointing at the field. The
+    // action stays the backstop.
+    if (!event.currentTarget.form?.reportValidity()) return
     if (!classChangeAllowed()) return
     if (!window.confirm(`Publish "${title.trim() || 'this lesson'}"? It will become visible to every member of its class.`)) return
     run('publish', async () => {
@@ -124,7 +129,8 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
     })
   }
 
-  function unpublish() {
+  function unpublish(event: MouseEvent<HTMLButtonElement>) {
+    if (!event.currentTarget.form?.reportValidity()) return
     if (!classChangeAllowed()) return
     if (!window.confirm(`Move "${title.trim() || 'this lesson'}" back to draft? Members will no longer see it.`)) return
     run('unpublish', async () => {
@@ -176,7 +182,7 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
 
       <label className="member-control"><Meta>Title</Meta><input required value={title} onChange={event => setTitle(event.target.value)} /></label>
       <label className="member-control"><Meta>Week</Meta><input required value={week} onChange={event => setWeek(event.target.value)} placeholder="Week 3" /></label>
-      <label className="member-control"><Meta>Number</Meta><input required type="number" min="1" step="1" value={number} onChange={event => setNumber(event.target.value)} /></label>
+      <label className="member-control"><Meta>Number</Meta><input required type="number" min="1" max="99" step="1" value={number} onChange={event => setNumber(event.target.value)} /></label>
       <label className="member-control"><Meta>Excerpt</Meta><textarea value={excerpt} onChange={event => setExcerpt(event.target.value)} /></label>
       <label className="member-control"><Meta>Duration</Meta><input value={duration} onChange={event => setDuration(event.target.value)} placeholder="8 min read" /></label>
       <label className="member-control"><Meta>Section label</Meta><input value={sectionLabel} onChange={event => setSectionLabel(event.target.value)} placeholder="FOUNDATIONS" /></label>
@@ -199,7 +205,7 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
       </div>
 
       <div className="class-form-actions">
-        <button className="primary-button" type="submit" disabled={isPending}>{pendingKey === 'save' ? 'Saving...' : 'Save draft'}</button>
+        <button className="primary-button" type="submit" disabled={isPending}>{pendingKey === 'save' ? 'Saving...' : status === 'published' ? 'Save changes' : 'Save draft'}</button>
         <button className="outline-button" type="button" disabled={isPending} onClick={publish}>{pendingKey === 'publish' ? 'Publishing...' : 'Publish'}</button>
         {status === 'published' && <button className="outline-button" type="button" disabled={isPending} onClick={unpublish}>{pendingKey === 'unpublish' ? 'Unpublishing...' : 'Unpublish'}</button>}
         <button className="outline-button" type="button" disabled={isPending} onClick={() => setQuestions(current => [...current, blankDraft()])}>Add question</button>

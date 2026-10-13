@@ -212,10 +212,11 @@ function validateLessonInput(input: LessonInput): { error: string } | { error: n
   if (!week) return { error: 'A week is required.' }
   const number = input.number.trim()
   if (!number) return { error: 'A lesson number is required.' }
-  // lessons.number is text and the list orders by it, so anything but digits sorts
-  // wrongly and silently ("3a", "#3", "03 "). The form's number input already refuses
-  // letters; this guards the action boundary.
-  if (!/^\d+$/.test(number)) return { error: 'The lesson number must be digits only.' }
+  // lessons.number is text and the list orders by it, so the stored value has to be exactly
+  // two digits. Anything else sorts wrongly and silently: "003" before "01", "0" before
+  // "01", "3a" anywhere. The form's min/max already bound this; the action is the boundary
+  // that enforces it, and stripping the leading zeros here is what closes the "003" hole.
+  if (!/^\d{1,2}$/.test(number) || parseInt(number, 10) < 1) return { error: 'Lesson numbers run from 1 to 99.' }
   const paragraphs = input.paragraphs.map(part => part.trim()).filter(Boolean)
   if (!paragraphs.length) return { error: 'At least one paragraph is required.' }
   return {
@@ -223,7 +224,7 @@ function validateLessonInput(input: LessonInput): { error: string } | { error: n
     fields: {
       class_id: classId,
       week,
-      number: number.padStart(2, '0'),
+      number: String(parseInt(number, 10)).padStart(2, '0'),
       title,
       excerpt: input.excerpt.trim(),
       duration: input.duration.trim(),
