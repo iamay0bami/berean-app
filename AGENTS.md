@@ -41,6 +41,19 @@
   `auth.users.email` (it's `varchar(255)`, not `text`) — `language sql`
   functions coerce automatically, `plpgsql` does not.
 
+## Data access conventions
+- Read access is not write access. A class_leader can also be a plain
+  member of another class, so a row RLS lets you read may be one you cannot
+  write. Scope authoring queries and pages explicitly; never infer
+  permission from a successful read.
+- An UPDATE or DELETE filtered out by RLS returns no error and zero rows.
+  Chain `.select('id')` and treat zero rows as a denial. Only INSERT raises.
+- Ids that are slugs of user-typed text (lessons, classes) must never equal
+  a static route sitting beside a dynamic segment. Reserved slugs live in
+  `app/actions.ts`; extend them whenever such a route is added.
+- Leadership (`profiles.assigned_class_id`) and membership
+  (`class_memberships`) are separate concepts. Do not merge them.
+
 ## Code conventions
 - Server Actions must return `{ error: string | null }`, never throw.
   Next.js redacts thrown Server Action error messages in production
@@ -61,15 +74,54 @@
 - `lucide-react` is pinned to an exact version (no caret) after a fresh
   npm release once shipped broken. Don't loosen this without checking the
   target version's package contents first.
+- Any new dependency (icon set, font, animation library) is pinned to an
+  exact version and justified in the plan, including its weight.
 
 ## Design system
-- Styling is hand-written CSS classes in `app/globals.css`, not Tailwind
-  utility classes — this is intentional (v0.dev's original structure),
-  keep new components consistent with existing class patterns rather than
-  introducing a parallel styling approach.
-- Layouts must be genuinely responsive down to mobile width — this will
-  become a real app, not just a desktop web tool. Avoid fixed-width
-  containers or patterns (tables, wide grids) that only work on desktop.
+- Once the design plan is approved it is saved to `docs/design-system.md`,
+  which is the source of truth for every UI task. Read it first. Do not
+  re-open the direction in an implementation task.
+- Styling is hand-written CSS in `app/globals.css`. No Tailwind utility
+  classes and no shadcn components. Inline styles only for dynamic values
+  (e.g. a progress width or a CSS variable).
+- Tokens: every colour, font, size, space, radius, shadow, blur, duration
+  and easing is a CSS variable defined once at the top of `globals.css`,
+  for both themes. No hard-coded hex or px values in component rules.
+- Themes: light and dark are both first-class. Token values switch via
+  `[data-theme]`, defaulting to `prefers-color-scheme`. The choice is stored
+  in a cookie and applied on the server so there is no flash of the wrong
+  theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
+- Typography: fonts load through `next/font` with the `latin` AND
+  `latin-ext` subsets. Content includes Yoruba, so ẹ ọ ṣ and tone marks must
+  render in the real font, not a fallback. Max two families, minimal weights.
+- Icons: Lucide at the pinned exact version, one size scale, one stroke
+  width. Every icon-only button has an accessible name. No second icon
+  library without approval.
+- Glass: `backdrop-filter` surfaces only for navigation bars, sticky headers
+  and overlays, never for reading text. Each needs a solid fallback under
+  `@supports not (backdrop-filter: blur(1px))` and a capped blur radius.
+- Motion: CSS only unless approved. Transitions name their properties
+  (never `transition: all`). `prefers-reduced-motion` is respected. At most
+  one signature moment per screen; motion that answers a user action is
+  welcome, decorative looping motion is not.
+- Imagery: prefer generated art (CSS/SVG, deterministic from an id) to
+  photographs. Raster images go through `next/image` with explicit
+  dimensions. State the weight of every new font, image and dependency.
+- Layout: mobile first. Verify at 360px, 768px and desktop. Primary actions
+  sit within thumb reach, touch targets are at least 44px, no horizontal
+  scroll.
+- Honest UI: never ship a control that does nothing, and never show a
+  hard-coded figure as if it were data. Wire it or remove it.
+- Reuse existing component classes before adding new ones. One name per
+  concept. Document new component classes in `docs/design-system.md`.
+
+## Skills
+- Installed in `.claude/skills/`: `frontend-design` (direction and critique)
+  and from jakubkrehel/skills: better-ui, better-typography, better-colors,
+  better-layout, better-accessibility, better-writing, interface-review.
+- Where a skill suggests Tailwind classes or shadcn components, this file
+  wins: express the result in `globals.css`.
+- UI tasks change one screen group at a time.
 
 ## Git
 - Never push without being told to. Commit locally, then wait for
@@ -83,3 +135,5 @@
   developer in an actual signed-in browser session before being
   considered done — this project has repeatedly caught real bugs that a
   clean build/typecheck missed entirely.
+- UI changes are checked at 360px and 768px, in light and dark, with
+  keyboard focus visible.
