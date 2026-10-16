@@ -105,11 +105,16 @@ export interface ClassLeader {
 // Admin-side class row: ActiveClass plus the active flag. Unlike getActiveClasses(),
 // getAdminClasses() returns deactivated rows too — classes_member_read (0006) already
 // permits an admin to select them.
+//
+// lessonCount is flattened from a lessons(count) embed and counts every status: a class may
+// not be deleted while it holds any lesson, and lessons.class_id is ON DELETE RESTRICT (0001),
+// so a drafts-only count would offer a Delete the database then refuses.
 export interface AdminClass {
   id: string
   name: string
   description: string | null
   active: boolean
+  lessonCount: number
 }
 
 // get_class_members() (0008) returns exactly (id, name, initials) — a lean roster row,
@@ -170,4 +175,10 @@ export interface LessonEdit {
   margin_note: string
   status: ContentStatus
   questions: LessonEditQuestion[]
+  // Every thought on the lesson, counted by insights.lesson_id — a different question from
+  // LessonEditQuestion.insightCount above, and NOT the sum of it. insights.question_id is
+  // nullable, so thoughts written without a question, and thoughts orphaned when their question
+  // was deleted, belong to no question and are invisible to any per-question count. This is the
+  // number that decides whether the lesson can be deleted, so it has to be the lesson-level one.
+  insightCount: number
 }

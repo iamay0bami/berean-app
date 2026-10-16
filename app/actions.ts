@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { LESSON_HAS_INSIGHTS } from '@/lib/messages'
+import type { ClassLeader } from '@/lib/types'
 
 const GENERIC_SIGN_IN_ERROR = 'Invalid email/username or password'
 const CONFIRM_EMAIL_ERROR = 'Please confirm your email before signing in — check your inbox.'
@@ -163,6 +165,12 @@ const LESSON_SLUG_FALLBACK = 'lesson'
 // write it would see "Saved" while nothing changed. Do not remove these guards.
 const WRITE_DENIED = "You can't change this lesson."
 const WRITE_DENIED_QUESTIONS = "You can't change this lesson's questions."
+// The class twin of WRITE_DENIED, for the same reason. updateClass and deactivateClass predate
+// the guard and check no row count, so this is the first class write that does.
+const WRITE_DENIED_CLASS = "You can't change this class."
+// Returned both by deleteClass's pre-check and by its 23503 mapping, so the two paths that mean
+// "this class still has lessons" cannot drift into saying different things.
+const CLASS_HAS_LESSONS = 'This class has lessons. Deactivate it instead.'
 
 // Static routes that sit beside a dynamic segment, so a slug equal to one of them would
 // be shadowed by the static page and become unreachable:
@@ -323,6 +331,46 @@ export async function publishLesson(id: string): Promise<{ error: string | null 
 
 export async function unpublishLesson(id: string): Promise<{ error: string | null }> {
   return setLessonStatus(id, 'draft')
+}
+
+// Hard delete, drafts only. Two guards the database cannot supply, which is why they are here:
+//
+//   * lessons_leader_delete (0006) has no status clause, so Postgres would delete a published
+//     lesson mid-read for every member of its class without complaint. Unpublishing first is the
+//     whole protection against a misclick here.
+//   * insights.lesson_id is ON DELETE CASCADE (0001), so the delete would take members' writing
+//     with it — silently, as a success. Hence the refusal rather than a cascade.
+//
+// The read is also what decides the messages, so it runs first: a row RLS hides reads as
+// undefined, which is indistinguishable from "no such lesson" and reported the same way, exactly
+// as updateLesson treats a zero-row write.
+export async function deleteLesson(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data: lesson, error: readError } = await supabase.from('lessons').select('id,status').eq('id', id).maybeSingle()
+    if (readError) return { error: readError.message }
+    if (!lesson) return { error: WRITE_DENIED }
+    if ((lesson as { status: string }).status === 'published') return { error: 'Unpublish this lesson before deleting it.' }
+
+    // Counted by lesson_id, NOT question_id. insights.question_id is nullable, so a thought
+    // written without a question — and one orphaned when its question was deleted, which
+    // saveLessonQuestions documents — belongs to no question and would be missed by a
+    // per-question count. Only this lesson-level count sees every thought that would be lost.
+    const { count, error: countError } = await supabase.from('insights').select('id', { count: 'exact', head: true }).eq('lesson_id', id)
+    if (countError) return { error: countError.message }
+    if ((count ?? 0) > 0) return { error: LESSON_HAS_INSIGHTS }
+
+    const { data, error } = await supabase.from('lessons').delete().eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED }
+    // Includes `/author/lessons/{id}` and `/classes/{id}`, which now 404. Revalidating a path
+    // that no longer resolves is harmless, and keeping the shared helper means a delete can
+    // never drift from what the other lesson writes refresh.
+    revalidateLessonPaths(id)
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to delete this lesson.' }
+  }
 }
 
 // Existing ids are kept, new questions get `${lessonId}-q-${suffix}`, sort_order follows
@@ -516,6 +564,50 @@ export async function activateClass(id: string): Promise<{ error: string | null 
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to activate this class.' }
+  }
+}
+
+// Hard delete, and the counterpart to deactivateClass above — the message it returns for a class
+// that still holds lessons deliberately points at the soft delete instead.
+//
+// Two guards, and only one of them is backed by the database:
+//
+//   * lessons.class_id is ON DELETE RESTRICT (0001), so a class with lessons genuinely cannot be
+//     deleted; PostgREST reports 23503. The pre-check exists to say so in words before trying, and
+//     the 23503 mapping is the real backstop for a caller whose read under-counts (a plain member
+//     sees only published lessons through lessons_member_read).
+//   * profiles.assigned_class_id is ON DELETE SET NULL (0001, re-created in 0005), so a class with
+//     an assigned leader deletes perfectly happily and leaves that leader holding the class_leader
+//     role with no class — a state assign_user_role's own guard refuses to create. Nothing in the
+//     schema stops this, so this check is the only thing that does.
+//
+// get_class_leaders() reads exactly profiles.assigned_class_id for role = 'class_leader' in the
+// caller's org, so it tests the precise column the FK would have nulled rather than a proxy for it.
+export async function deleteClass(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    // Lessons are checked first so the message names the blocker the database itself enforces.
+    const { count, error: countError } = await supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('class_id', id)
+    if (countError) return { error: countError.message }
+    if ((count ?? 0) > 0) return { error: CLASS_HAS_LESSONS }
+
+    const { data: leaders, error: leaderError } = await supabase.rpc('get_class_leaders')
+    if (leaderError) return { error: leaderError.message }
+    if (((leaders ?? []) as ClassLeader[]).some(leader => leader.class_id === id)) return { error: 'Reassign its leader first.' }
+
+    const { data, error } = await supabase.from('classes').delete().eq('id', id).select('id')
+    if (error) {
+      // The restrict FK firing: the pre-check above could not see every lesson.
+      if (error.code === '23503') return { error: CLASS_HAS_LESSONS }
+      return { error: error.message }
+    }
+    if (!data?.length) return { error: WRITE_DENIED_CLASS }
+    revalidatePath('/admin/members')
+    revalidatePath('/admin/classes')
+    revalidatePath('/classes')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to delete this class.' }
   }
 }
 

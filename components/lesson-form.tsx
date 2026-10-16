@@ -2,8 +2,9 @@
 
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { FormEvent, MouseEvent, useRef, useState, useTransition } from 'react'
-import { createLesson, publishLesson, saveLessonQuestions, unpublishLesson, updateLesson } from '@/app/actions'
+import { createLesson, deleteLesson, publishLesson, saveLessonQuestions, unpublishLesson, updateLesson } from '@/app/actions'
 import type { LessonInput } from '@/app/actions'
+import { LESSON_HAS_INSIGHTS } from '@/lib/messages'
 import { Header, Meta } from '@/components/shared'
 import type { ActiveClass, LessonEdit, LessonEditQuestion } from '@/lib/types'
 
@@ -44,9 +45,20 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
   const [body, setBody] = useState((lesson?.paragraphs ?? []).join('\n\n'))
   const [marginNote, setMarginNote] = useState(lesson?.margin_note ?? '')
   const [questions, setQuestions] = useState<QuestionDraft[]>(() => (lesson?.questions ?? []).map(toDraft))
-  const [pendingKey, setPendingKey] = useState<'save' | 'publish' | 'unpublish' | null>(null)
+  const [pendingKey, setPendingKey] = useState<'save' | 'publish' | 'unpublish' | 'delete' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  // Every thought on the lesson, from the server. Deliberately the lesson-level count and not a
+  // sum of `questions[].insightCount`: insights.question_id is nullable, so thoughts written
+  // without a question — and thoughts orphaned when their question was deleted — sit on no
+  // question at all. Summing the per-question counts would miss them and leave Delete enabled on
+  // a lesson deleteLesson refuses.
+  const thoughtCount = lesson?.insightCount ?? 0
+  // Delete exists only for a lesson that has already been saved and is not published. `lesson` is
+  // null on /author/lessons/new, which is what keeps the create form free of a delete affordance,
+  // and a published lesson is refused by the action, so offering the button would be a dead end.
+  const draftLesson = lesson !== null && status === 'draft'
+  const canDelete = draftLesson && thoughtCount === 0
 
   // Server-fetched state, so a successful mutation reloads rather than patching local
   // state — the approach class-manage-view and admin-classes-view take.
@@ -140,6 +152,31 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
     })
   }
 
+  // Deliberately NOT through persist(): re-saving every field and question first would be
+  // pointless work on a row that is about to disappear, and persist()'s create branch is a
+  // duplicate-lesson hazard this button must never reach. For the same reason it does not use
+  // run(), whose success path reloads the current URL — after a delete that URL is a lesson that
+  // no longer exists. The list is the honest destination, and window.location.assign is how the
+  // other post-mutation navigations in this app move (there is no useRouter in any component).
+  //
+  // canDelete re-states the button's own condition because the action is the authority: the
+  // server re-checks all three, and this guard only keeps a mistimed click from firing.
+  function removeLesson() {
+    if (!lesson || !canDelete) return
+    if (!window.confirm(`Delete "${lesson.title}"? This can't be undone.`)) return
+    setError(null)
+    setPendingKey('delete')
+    startTransition(async () => {
+      const result = await deleteLesson(lesson.id)
+      if (result.error) {
+        setError(result.error)
+        setPendingKey(null)
+        return
+      }
+      window.location.assign('/author/lessons')
+    })
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     saveDraft()
@@ -210,6 +247,19 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
         {status === 'published' && <button className="outline-button" type="button" disabled={isPending} onClick={unpublish}>{pendingKey === 'unpublish' ? 'Unpublishing...' : 'Unpublish'}</button>}
         <button className="outline-button" type="button" disabled={isPending} onClick={() => setQuestions(current => [...current, blankDraft()])}>Add question</button>
       </div>
+
+      {/* Its own row, below the primary actions rather than a fifth button inside them. Delete used
+          to sit directly after Add question, one slip away from Publish — and a confirm dialog is a
+          safety net for a misclick, not a substitute for not putting the misclick there. The whole
+          row is gated on draftLesson so /new and a published lesson render no empty bordered row.
+
+          The reason is visible text beside the button, not a title or tooltip: a disabled button is
+          not focusable, so anything attached to it would announce nothing, and a tooltip is
+          unreachable on touch. The author has to be told why the button they can see is dead. */}
+      {draftLesson && <div className="danger-row">
+        <button className="danger-button" type="button" disabled={isPending || thoughtCount > 0} onClick={removeLesson}>{pendingKey === 'delete' ? 'Deleting...' : 'Delete lesson'}</button>
+        {thoughtCount > 0 && <p className="auth-note">{LESSON_HAS_INSIGHTS}</p>}
+      </div>}
 
       {error && <p className="field-message error" role="status">{error}</p>}
     </form>

@@ -82,9 +82,16 @@ export async function getActiveClasses(): Promise<ActiveClass[]> {
 // purely an app-side filter difference, not a permissions one.
 export async function getAdminClasses(): Promise<AdminClass[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('classes').select('id,name,description,active').order('name')
+  const { data, error } = await supabase.from('classes').select('id,name,description,active,lessons(count)').order('name')
   if (error) throw error
-  return (data ?? []) as AdminClass[]
+  // The embed arrives as a one-element array; flatten it so callers get a number rather than a
+  // PostgREST shape, the same way getLessonForEdit() turns insights(count) into a count.
+  // lessons_leader_read (0006) passes for an admin through is_class_leader_for, so drafts are
+  // included — which is what "no lessons of any status" for a delete requires.
+  return ((data ?? []) as any[]).map(row => ({
+    id: row.id, name: row.name, description: row.description, active: row.active,
+    lessonCount: row.lessons?.[0]?.count ?? 0,
+  }))
 }
 
 // The caller's own memberships. get_my_classes() (0008) returns (id, name) only — it has
@@ -237,7 +244,11 @@ export async function getLessonForEdit(id: string): Promise<LessonEdit | undefin
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('lessons')
-    .select('id,class_id,week,number,title,excerpt,duration,section_label,quote,reference,paragraphs,margin_note,status,questions(id,text,sort_order,insights(count))')
+    // Two insights embeds, over two different foreign keys and neither ambiguous: the nested one
+    // runs questions -> insights over question_id, the top-level one lessons -> insights over
+    // lesson_id (insights has exactly one FK to lessons). Both are needed, and the lesson-level
+    // one cannot be derived from the per-question ones — see the note on insightCount below.
+    .select('id,class_id,week,number,title,excerpt,duration,section_label,quote,reference,paragraphs,margin_note,status,questions(id,text,sort_order,insights(count)),insights(count)')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
@@ -253,6 +264,11 @@ export async function getLessonForEdit(id: string): Promise<LessonEdit | undefin
     excerpt: row.excerpt, duration: row.duration, section_label: row.section_label,
     quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [],
     margin_note: row.margin_note, status: row.status as ContentStatus, questions,
+    // The lesson-level total, which is NOT the sum of the counts above: a thought with a null
+    // question_id (written without one, or orphaned when its question was deleted) counts here
+    // and nowhere above. deleteLesson counts the same way, so this is what keeps the form's
+    // disabled state and the server's refusal in agreement.
+    insightCount: row.insights?.[0]?.count ?? 0,
   }
 }
 
