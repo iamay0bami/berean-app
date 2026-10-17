@@ -91,9 +91,9 @@
   `[data-theme]`, defaulting to `prefers-color-scheme`. The choice is stored
   in a cookie and applied on the server so there is no flash of the wrong
   theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
-- Typography: fonts load through `next/font` with the `latin` AND
-  `latin-ext` subsets. Content includes Yoruba, so ẹ ọ ṣ and tone marks must
-  render in the real font, not a fallback. Max two families, minimal weights.
+- Typography: fonts load through `next/font` with the `latin`, `latin-ext` AND
+  `vietnamese` subsets. Content includes Yoruba: ẹ and ọ and the combining tone
+  marks live in the `vietnamese` block, not `latin-ext`. Verify in a production build.
 - Icons: Lucide at the pinned exact version, one size scale, one stroke
   width. Every icon-only button has an accessible name. No second icon
   library without approval.
@@ -114,6 +114,13 @@
   hard-coded figure as if it were data. Wire it or remove it.
 - Reuse existing component classes before adding new ones. One name per
   concept. Document new component classes in `docs/design-system.md`.
+- Token values (custom properties) use hex and rgb() only. Never `color-mix()` or
+  `oklch()` inside a `--*` property: an unsupported value fails at use time with
+  no fallback. Gate any mix with `@supports`.
+- No CSS rule may target a bare element tag inside a component block
+  (e.g. `.lesson-index > span`). Style by class.
+- Text on a brass fill is always ink. Control borders reach 3:1 against the
+  surface they sit on. Measure with a tool, not by eye.
 
 ## Skills
 - Installed in `.claude/skills/`: `frontend-design` (direction and critique)
