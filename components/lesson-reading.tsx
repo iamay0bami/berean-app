@@ -1,25 +1,115 @@
 'use client'
 
-import { ArrowLeft, Bookmark, Check, ChevronRight, Heart, MoreHorizontal, Send, Share2, Sparkles } from 'lucide-react'
-import Link from 'next/link'
-import { Fragment, useEffect, useState } from 'react'
+import { Check, ChevronRight, Sparkles } from 'lucide-react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { Lesson } from '@/lib/types'
-import { Meta, Rule } from '@/components/shared'
+import { EmptyState } from '@/components/empty-state'
+import { Meta, ReadingHeader, Rule } from '@/components/shared'
 
 export default function LessonReading({ lesson }: { lesson: Lesson }) {
-  const [progress, setProgress] = useState(18)
+  const railRef = useRef<HTMLDivElement>(null)
   const [answered, setAnswered] = useState<string[]>([])
-  const [thought, setThought] = useState('')
 
+  // The rail is written through a ref in a rAF, so scrolling causes no React
+  // render and no layout: only --progress and a composited transform change.
   useEffect(() => {
-    const fn = () => setProgress(Math.min(100, Math.max(18, Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100))))
-    window.addEventListener('scroll', fn)
-    return () => window.removeEventListener('scroll', fn)
+    const el = railRef.current
+    if (!el) return
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+      el.style.setProperty('--progress', String(progress))
+    }
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(measure)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    measure()
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
   }, [])
 
-  // The margin note sits after the second paragraph where there is one, otherwise after
-  // the first — the position the old three-paragraph version hardcoded. Every paragraph is
-  // rendered now, rather than a fourth onward being dropped.
+  // The margin note sits after the second paragraph where there is one,
+  // otherwise after the first. Every paragraph renders.
   const marginNoteIndex = Math.min(1, lesson.paragraphs.length - 1)
-  return <div className="page-wrap lesson-page"><div className="bookmark-ribbon" style={{ height: `${Math.max(64, 220 - progress * 1.3)}px` }}><Bookmark size={18} fill="currentColor" /><span>{progress}%</span></div><header className="reading-header"><Link className="icon-button" href="/classes" aria-label="Back to classes"><ArrowLeft size={20} /></Link><Meta>{lesson.week}</Meta><button className="icon-button" aria-label="More options"><MoreHorizontal size={20} /></button></header><main className="reading-content"><Meta>{lesson.sectionLabel}</Meta><h1>{lesson.title}</h1>{lesson.quote && <p className="reading-deck">{lesson.quote}</p>}{lesson.reference && <Meta>{lesson.reference}</Meta>}<Rule /><div className="reading-copy">{lesson.paragraphs.map((paragraph, index) => <Fragment key={index}><p>{paragraph}</p>{index === marginNoteIndex && lesson.marginNote ? <div className="margin-note"><Sparkles size={17} /><div><Meta>A THOUGHT TO CARRY</Meta><p>{lesson.marginNote}</p></div></div> : null}</Fragment>)}</div><section className="review-section"><div className="section-heading"><h2>Make it yours</h2><Meta>REFLECT</Meta></div>{lesson.questions.map((question, i) => { const isAnswered = answered.includes(question.id); return <button className={`review-question ${isAnswered ? 'answered' : ''}`} key={question.id} onClick={() => setAnswered(isAnswered ? answered.filter(id => id !== question.id) : [...answered, question.id])}><span>{isAnswered ? <Check size={16} /> : i + 1}</span><strong>{question.text}</strong><ChevronRight size={18} /></button> })}</section><section className="share-section"><div className="section-heading"><h2>From the room</h2><Meta>3 THOUGHTS</Meta></div><p className="section-note">A few honest words from people walking this with you.</p>{lesson.thoughts.map(thoughtItem => <div className="insight" key={thoughtItem.id}><div className="avatar">{thoughtItem.initials}</div><div><strong>{thoughtItem.name}</strong><Meta> {thoughtItem.timestamp}</Meta><p>{thoughtItem.text}</p><div className="insight-actions"><Heart size={15} /> {thoughtItem.hearts} <Share2 size={15} /> Share</div></div></div>)}<div className="composer"><textarea value={thought} onChange={event => setThought(event.target.value)} placeholder="What are you noticing?" aria-label="Share your thought" /><button className="send-button" aria-label="Share this thought" onClick={() => setThought('')}><Send size={17} /></button></div></section></main></div>
+  const thoughtCount = lesson.thoughts.length
+
+  return (
+    <div className="page-wrap lesson-page">
+      <div className="reading-rail" ref={railRef} aria-hidden="true" />
+      <ReadingHeader backHref="/classes" backLabel="Back to classes" title={<Meta>{lesson.week}</Meta>} />
+      <main className="reading-content">
+        <Meta>{lesson.sectionLabel}</Meta>
+        <h1>{lesson.title}</h1>
+        {lesson.quote && <p className="reading-deck">{lesson.quote}</p>}
+        {lesson.reference && <Meta>{lesson.reference}</Meta>}
+        <Rule />
+        <div className="reading-copy">
+          {lesson.paragraphs.map((paragraph, index) => (
+            <Fragment key={index}>
+              <p>{paragraph}</p>
+              {index === marginNoteIndex && lesson.marginNote ? (
+                <div className="margin-note">
+                  <Sparkles size={17} />
+                  <div>
+                    <Meta>A thought to carry</Meta>
+                    <p>{lesson.marginNote}</p>
+                  </div>
+                </div>
+              ) : null}
+            </Fragment>
+          ))}
+        </div>
+
+        {lesson.questions.length > 0 && (
+          <section className="review-section">
+            <div className="section-heading"><h2>Make it yours</h2></div>
+            {lesson.questions.map((question, index) => {
+              const isAnswered = answered.includes(question.id)
+              return (
+                <button
+                  className={`review-question ${isAnswered ? 'answered' : ''}`}
+                  key={question.id}
+                  onClick={() => setAnswered(isAnswered ? answered.filter(id => id !== question.id) : [...answered, question.id])}
+                >
+                  <span className="review-question__mark">{isAnswered ? <Check size={16} /> : index + 1}</span>
+                  <strong className="review-question__text">{question.text}</strong>
+                  <ChevronRight size={18} />
+                </button>
+              )
+            })}
+          </section>
+        )}
+
+        <section className="share-section">
+          <div className="section-heading">
+            <h2>From the room</h2>
+            {thoughtCount > 0 && <Meta>{thoughtCount === 1 ? '1 thought' : `${thoughtCount} thoughts`}</Meta>}
+          </div>
+          {thoughtCount > 0 ? (
+            <>
+              <p className="section-note">A few honest words from people walking this with you.</p>
+              {lesson.thoughts.map(thoughtItem => (
+                <div className="insight" key={thoughtItem.id}>
+                  <div className="avatar">{thoughtItem.initials}</div>
+                  <div>
+                    <strong>{thoughtItem.name}</strong><Meta> {thoughtItem.timestamp}</Meta>
+                    <p>{thoughtItem.text}</p>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <EmptyState title="No thoughts yet" body="Thoughts from people in this class will gather here." />
+          )}
+        </section>
+      </main>
+    </div>
+  )
 }

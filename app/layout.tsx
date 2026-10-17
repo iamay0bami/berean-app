@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Inter, JetBrains_Mono } from 'next/font/google'
+import { Fraunces, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
+import { readTheme } from '@/lib/theme'
 
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' })
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono-local' })
+// All three subsets on both families. `ẹ` (U+1EB9) and `ọ` (U+1ECD), and the
+// combining tone marks, live in Google's *vietnamese* block — not latin-ext.
+// Requesting only latin + latin-ext leaves Yoruba text in a fallback face.
+const fraunces = Fraunces({ subsets: ['latin', 'latin-ext', 'vietnamese'], variable: '--font-fraunces', display: 'swap' })
+const hanken = Hanken_Grotesk({ subsets: ['latin', 'latin-ext', 'vietnamese'], variable: '--font-interface', display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Berean — A little room to listen, learn, and live the Word',
@@ -12,8 +15,31 @@ export const metadata: Metadata = {
   generator: 'v0.app',
 }
 
-export const viewport: Viewport = { colorScheme: 'light', themeColor: '#FAF3E7', userScalable: false }
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await readTheme()
+  return {
+    // Both schemes are supported in CSS; the meta only tells the UA so.
+    colorScheme: 'light dark',
+    // An explicit choice has one known ground; `system` lets the browser pick.
+    themeColor: theme === 'dark' ? '#141A29'
+      : theme === 'light' ? '#F5F4F2'
+      : [
+          { media: '(prefers-color-scheme: light)', color: '#F5F4F2' },
+          { media: '(prefers-color-scheme: dark)', color: '#141A29' },
+        ],
+    userScalable: false,
+  }
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={`${fraunces.variable} ${inter.variable} ${mono.variable}`}><body className="antialiased">{children}</body></html>
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const theme = await readTheme()
+  return (
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${hanken.variable}`}
+      data-theme={theme === 'system' ? undefined : theme}
+    >
+      <body className="antialiased">{children}</body>
+    </html>
+  )
 }

@@ -11,5 +11,5 @@ export default async function HomePage() {
     headers().then(incoming => incoming.get('x-vercel-ip-timezone')),
   ])
   const timeZone = safeTimeZone(tzHeader)
-  return <AppShell><HomeView lesson={lesson} sermon={sermon} prayer={prayer ?? { id: '', initials: '', name: '', time: '', text: '', hearts: 0 }} viewerRole={viewer.role} greeting={pickGreeting(viewer.firstName, timeZone)} dateLabel={dateLabel(timeZone)} /></AppShell>
+  return <AppShell><HomeView lesson={lesson} sermon={sermon} prayer={prayer} viewerRole={viewer.role} greeting={pickGreeting(viewer.firstName, timeZone)} dateLabel={dateLabel(timeZone)} /></AppShell>
 }

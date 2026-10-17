@@ -30,35 +30,45 @@ export async function signInWithIdentifier(identifier: string, password: string)
   // server action. The service-role client is used ONLY for the
   // resolve_username_email lookup and never signs a user in.
   const supabase = await createClient()
-  console.error(`[signInDebug] enter identifier=${JSON.stringify(value)} passwordLength=${password?.length ?? 0}`)
-  async function attempt(email: string, branch: 'email' | 'username' | 'dummy') {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    console.error(`[signInDebug] branch=${branch} email=${JSON.stringify(email)} lowerMatch=${JSON.stringify(value.toLowerCase() === email.toLowerCase())} error=`, error ? { message: error.message, code: error.code, status: error.status, name: error.name } : null)
+  async function attempt(email: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return error
   }
   if (EMAIL_PATTERN.test(value)) {
-    return { error: signInError(await attempt(value, 'email')) }
+    return { error: signInError(await attempt(value)) }
   }
-  const rpc = await createServiceClient().rpc('resolve_username_email', { p_username: value })
-  console.error(`[signInDebug] rpc identifier=${JSON.stringify(value)} data=${JSON.stringify(rpc.data)} error=`, rpc.error ? { message: rpc.error.message, code: rpc.error.code } : null)
-  const { data: email } = rpc
+  const { data: email } = await createServiceClient().rpc('resolve_username_email', { p_username: value })
   if (email && typeof email === 'string') {
-    return { error: signInError(await attempt(email, 'username')) }
+    return { error: signInError(await attempt(email)) }
   }
   // Timing-normalization fallback for an unresolvable username: burn one
   // throwaway sign-in attempt. GoTrue's unknown-email path returns without a
   // bcrypt compare, so this equalizes request-level timing but NOT bcrypt
   // cost; a fully equal approach would require a server-side hash burn.
-  await attempt(DUMMY_RESOLUTION_EMAIL, 'dummy')
+  await attempt(DUMMY_RESOLUTION_EMAIL)
   return { error: GENERIC_SIGN_IN_ERROR }
 }
 
+// Throws, and is caught by every caller below. The message is user-facing: an
+// expired session is the most common failure on these paths, and "Authentication
+// required" told the member nothing they could act on.
 async function userClient() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Authentication required')
+  if (!user) throw new Error('Your session has expired. Sign in again.')
   return { supabase, user }
 }
+
+// The conversion marker for everything between here and updateMyProfile. These actions
+// used to throw; Next.js redacts a thrown Server Action message in production, so they
+// return `{ error }` like the newer half of this file already does. UPDATE and DELETE
+// additionally chain `.select('id')`: RLS filters those silently and reports zero rows
+// as success, which is exactly the lie this batch exists to remove.
+const WRITE_DENIED_THOUGHT = "You can't change this thought."
+const WRITE_DENIED_DISCUSSION = "You can't change this discussion."
+const WRITE_DENIED_REPLY = "You can't change this reply."
+const WRITE_DENIED_SERMON = "You can't publish this sermon."
+const WRITE_DENIED_PRAYER_POINT = "You can't publish this prayer point."
 
 function requireText(value: string) {
   const text = value.trim()
@@ -66,89 +76,162 @@ function requireText(value: string) {
   return text
 }
 
-export async function createInsight(lessonId: string, text: string, questionId?: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('insights').insert({ lesson_id: lessonId, question_id: questionId ?? null, author_id: user.id, text: requireText(text) })
-  if (error) throw error
-  revalidatePath(`/classes/${lessonId}`)
+export async function createInsight(lessonId: string, text: string, questionId?: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('insights').insert({ lesson_id: lessonId, question_id: questionId ?? null, author_id: user.id, text: requireText(text) })
+    if (error) return { error: error.message }
+    revalidatePath(`/classes/${lessonId}`)
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to save your thought.' }
+  }
 }
 
-export async function updateInsight(id: string, text: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('insights').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
+export async function updateInsight(id: string, text: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('insights').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_THOUGHT }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this thought.' }
+  }
 }
 
-export async function deleteInsight(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('insights').delete().eq('id', id)
-  if (error) throw error
+export async function deleteInsight(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('insights').delete().eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_THOUGHT }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to delete this thought.' }
+  }
 }
 
-export async function createDiscussion(text: string, topicId?: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('discussions').insert({ author_id: user.id, topic_id: topicId ?? null, text: requireText(text) })
-  if (error) throw error
-  revalidatePath('/discuss')
+export async function createDiscussion(text: string, topicId?: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('discussions').insert({ author_id: user.id, topic_id: topicId ?? null, text: requireText(text) })
+    if (error) return { error: error.message }
+    revalidatePath('/discuss')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to post your thought.' }
+  }
 }
 
-export async function updateDiscussion(id: string, text: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('discussions').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
+export async function updateDiscussion(id: string, text: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('discussions').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_DISCUSSION }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this discussion.' }
+  }
 }
 
-export async function deleteDiscussion(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('discussions').delete().eq('id', id)
-  if (error) throw error
+export async function deleteDiscussion(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('discussions').delete().eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_DISCUSSION }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to delete this discussion.' }
+  }
 }
 
-export async function createDiscussionReply(discussionId: string, text: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('discussion_replies').insert({ discussion_id: discussionId, author_id: user.id, text: requireText(text) })
-  if (error) throw error
-  revalidatePath('/discuss')
+export async function createDiscussionReply(discussionId: string, text: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('discussion_replies').insert({ discussion_id: discussionId, author_id: user.id, text: requireText(text) })
+    if (error) return { error: error.message }
+    revalidatePath('/discuss')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to post your reply.' }
+  }
 }
 
-export async function updateDiscussionReply(id: string, text: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('discussion_replies').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
+export async function updateDiscussionReply(id: string, text: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('discussion_replies').update({ text: requireText(text), updated_at: new Date().toISOString() }).eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_REPLY }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update this reply.' }
+  }
 }
 
-export async function deleteDiscussionReply(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('discussion_replies').delete().eq('id', id)
-  if (error) throw error
+export async function deleteDiscussionReply(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('discussion_replies').delete().eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_REPLY }
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to delete this reply.' }
+  }
 }
 
-export async function createPrayerPoint(text: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('prayer_points').insert({ author_id: user.id, text: requireText(text), status: 'draft' })
-  if (error) throw error
-  revalidatePath('/sermons')
+export async function createPrayerPoint(text: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('prayer_points').insert({ author_id: user.id, text: requireText(text), status: 'draft' })
+    if (error) return { error: error.message }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to save this prayer point.' }
+  }
 }
 
-export async function confirmPrayer(prayerPointId: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('prayer_confirmations').upsert({ prayer_point_id: prayerPointId, user_id: user.id })
-  if (error) throw error
-  revalidatePath('/sermons')
+export async function confirmPrayer(prayerPointId: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('prayer_confirmations').upsert({ prayer_point_id: prayerPointId, user_id: user.id })
+    if (error) return { error: error.message }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to record your prayer.' }
+  }
 }
 
-export async function removePrayerConfirmation(prayerPointId: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('prayer_confirmations').delete().eq('prayer_point_id', prayerPointId).eq('user_id', user.id)
-  if (error) throw error
-  revalidatePath('/sermons')
+// Deliberately no `.select('id')` zero-row guard: un-confirming is a toggle, and a
+// delete that removes nothing because the row is already gone is the desired end state.
+export async function removePrayerConfirmation(prayerPointId: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('prayer_confirmations').delete().eq('prayer_point_id', prayerPointId).eq('user_id', user.id)
+    if (error) return { error: error.message }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to remove your prayer.' }
+  }
 }
 
-export async function updateMyProfile(name: string, initials: string, tagline: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.rpc('update_my_profile', { new_name: requireText(name), new_initials: requireText(initials), new_tagline: tagline.trim() })
-  if (error) throw error
-  revalidatePath('/profile')
+export async function updateMyProfile(name: string, initials: string, tagline: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { error } = await supabase.rpc('update_my_profile', { new_name: requireText(name), new_initials: requireText(initials), new_tagline: tagline.trim() })
+    if (error) return { error: error.message }
+    revalidatePath('/profile')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to update your profile.' }
+  }
 }
 
 export async function signOut() {
@@ -428,32 +511,54 @@ export async function saveLessonQuestions(lessonId: string, questions: { id?: st
   }
 }
 
-export async function createSermon(input: Record<string, unknown>) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('sermons').insert({ ...input, created_by: user.id })
-  if (error) throw error
-  revalidatePath('/sermons')
+export async function createSermon(input: Record<string, unknown>): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('sermons').insert({ ...input, created_by: user.id })
+    if (error) return { error: error.message }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to create this sermon.' }
+  }
 }
 
-export async function publishSermon(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('sermons').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
-  revalidatePath('/sermons')
+export async function publishSermon(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('sermons').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_SERMON }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to publish this sermon.' }
+  }
 }
 
-export async function publishPrayerPoint(id: string) {
-  const { supabase } = await userClient()
-  const { error } = await supabase.from('prayer_points').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) throw error
-  revalidatePath('/sermons')
+export async function publishPrayerPoint(id: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase } = await userClient()
+    const { data, error } = await supabase.from('prayer_points').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id).select('id')
+    if (error) return { error: error.message }
+    if (!data?.length) return { error: WRITE_DENIED_PRAYER_POINT }
+    revalidatePath('/sermons')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to publish this prayer point.' }
+  }
 }
 
-export async function createDiscussionTopic(prompt: string, lessonId?: string, sermonId?: string) {
-  const { supabase, user } = await userClient()
-  const { error } = await supabase.from('discussion_topics').insert({ prompt: requireText(prompt), lesson_id: lessonId ?? null, sermon_id: sermonId ?? null, created_by: user.id })
-  if (error) throw error
-  revalidatePath('/discuss')
+export async function createDiscussionTopic(prompt: string, lessonId?: string, sermonId?: string): Promise<{ error: string | null }> {
+  try {
+    const { supabase, user } = await userClient()
+    const { error } = await supabase.from('discussion_topics').insert({ prompt: requireText(prompt), lesson_id: lessonId ?? null, sermon_id: sermonId ?? null, created_by: user.id })
+    if (error) return { error: error.message }
+    revalidatePath('/discuss')
+    return { error: null }
+  } catch (cause) {
+    return { error: cause instanceof Error ? cause.message : 'Unable to create this topic.' }
+  }
 }
 
 export async function assignUserRole(userId: string, role: 'member' | 'class_leader' | 'admin', classId?: string): Promise<{ error: string | null }> {

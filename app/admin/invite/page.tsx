@@ -8,7 +8,7 @@ import { getCurrentRole, getOrgInviteCode } from '@/lib/mock-data'
 export default async function AdminInvitePage() {
   const role = await getCurrentRole()
   if (role === null) redirect('/auth/sign-in?next=/admin/invite')
-  if (role !== 'admin') return <AppShell><div className="page-wrap"><Header /><main><EmptyState eyebrow="ADMINISTRATION" title="Not permitted" body="You do not have permission to manage invite codes." /></main></div></AppShell>
+  if (role !== 'admin') return <AppShell><div className="page-wrap"><Header /><main><EmptyState title="Not permitted" body="You do not have permission to manage invite codes." /></main></div></AppShell>
   const initialCode = await getOrgInviteCode()
   return <AppShell><AdminInviteView initialCode={initialCode} /></AppShell>
 }

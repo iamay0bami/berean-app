@@ -8,7 +8,7 @@ import { getActiveClasses, getAdminMembers, getClassLeaders, getCurrentRole } fr
 export default async function AdminMembersPage() {
   const role = await getCurrentRole()
   if (role === null) redirect('/auth/sign-in?next=/admin/members')
-  if (role !== 'admin') return <AppShell><div className="page-wrap"><Header /><main><EmptyState eyebrow="ADMINISTRATION" title="Not permitted" body="You do not have permission to manage members." /></main></div></AppShell>
+  if (role !== 'admin') return <AppShell><div className="page-wrap"><Header /><main><EmptyState title="Not permitted" body="You do not have permission to manage members." /></main></div></AppShell>
   const [members, classes, leaders] = await Promise.all([getAdminMembers(), getActiveClasses(), getClassLeaders()])
   return <AppShell><AdminMembersView members={members} classes={classes} leaders={leaders} /></AppShell>
 }

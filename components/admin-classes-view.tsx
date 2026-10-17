@@ -102,10 +102,10 @@ export default function AdminClassesView({ classes, rosters, members, leaders }:
     run(deleteKey(item.id), () => deleteClass(item.id))
   }
 
-  return <div className="page-wrap"><Header /><main><section className="page-intro"><AdminNav /><Meta>ADMINISTRATION</Meta><h1>Classes</h1><p>Create classes, keep their details current, and manage who belongs to each one.</p></section>
+  return <div className="page-wrap"><Header /><main><section className="page-intro"><AdminNav /><h1>Classes</h1><p>Create classes, keep their details current, and manage who belongs to each one.</p></section>
 
     <form className="paper-card class-form" onSubmit={submitCreate}>
-      <Meta>NEW CLASS</Meta>
+      <Meta>New class</Meta>
       <label className="member-control"><Meta>Name</Meta><input required value={createDraft.name} onChange={event => setCreateDraft(current => ({ ...current, name: event.target.value }))} /></label>
       <label className="member-control"><Meta>Description</Meta><textarea value={createDraft.description} onChange={event => setCreateDraft(current => ({ ...current, description: event.target.value }))} /></label>
       <div className="class-form-actions"><button className="primary-button" type="submit" disabled={isPending}>{pendingKey === 'create' ? 'Creating...' : 'Create class'}</button></div>
@@ -172,6 +172,6 @@ export default function AdminClassesView({ classes, rosters, members, leaders }:
         {deleteError && <p className="field-message error" role="status">{deleteError}</p>}
       </article>
     })}</section>
-      : <EmptyState eyebrow="CLASSES" title="No classes yet" body="Create the first class above and it will appear here." />}
+      : <EmptyState title="No classes yet" body="Create the first class above and it will appear here." />}
   </main></div>
 }

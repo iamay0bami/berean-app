@@ -168,8 +168,8 @@ function mapSermon(row: any): Sermon {
   const date = new Date(`${row.date}T00:00:00`)
   return {
     id: row.id,
-    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
-    detailDate: row.detail_date || date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase(),
+    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    detailDate: row.detail_date || date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     title: row.title,
     speaker: row.speaker,
     text: row.text,
@@ -205,6 +205,20 @@ export async function getLessons() {
   const { data, error } = await supabase.from('lessons').select(select).eq('status', 'published').order('number')
   if (error) throw error
   return Promise.all((data ?? []).map(mapLesson))
+}
+
+// "Latest" means most recently published, not highest lesson number: a class can
+// publish out of order, or revise an earlier lesson a fortnight later.
+// `created_at` is the column the reader's meaning maps to, and limit(1) means the
+// home card no longer loads every published lesson with its insights embed.
+export async function getLatestLesson() {
+  const { supabase, user } = await getSessionUser()
+  const select = user
+    ? '*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)'
+    : '*, questions(id,text,sort_order)'
+  const { data, error } = await supabase.from('lessons').select(select).eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (error) throw error
+  return data ? mapLesson(data) : undefined
 }
 
 export async function getLesson(id: string) {
@@ -272,9 +286,10 @@ export async function getLessonForEdit(id: string): Promise<LessonEdit | undefin
   }
 }
 
-export async function getSermons() {
+export async function getSermons(limit?: number) {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('sermons').select('*').eq('status', 'published').order('date', { ascending: false })
+  const query = supabase.from('sermons').select('*').eq('status', 'published').order('date', { ascending: false })
+  const { data, error } = await (limit ? query.limit(limit) : query)
   if (error) throw error
   return (data ?? []).map(mapSermon)
 }
@@ -286,10 +301,11 @@ export async function getSermon(id: string) {
   return data ? mapSermon(data) : undefined
 }
 
-export async function getPrayerPoints() {
+export async function getPrayerPoints(limit?: number) {
   const { supabase, user } = await getSessionUser()
   if (!user) return []
-  const { data, error } = await supabase.from('prayer_points').select('id,author_id,text,hearts,created_at,prayer_confirmations(count)').eq('status', 'published').order('created_at', { ascending: false })
+  const query = supabase.from('prayer_points').select('id,author_id,text,hearts,created_at,prayer_confirmations(count)').eq('status', 'published').order('created_at', { ascending: false })
+  const { data, error } = await (limit ? query.limit(limit) : query)
   if (error) throw error
   const rows = data ?? []
   const displays = await displaysFor(rows)
@@ -337,13 +353,16 @@ export async function getProfile(): Promise<ProfileResult> {
     status: 'ready',
     profile: {
       initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline, role: data.role as AppRole,
-      stats: [{ value: 0, label: 'LESSONS' }, { value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
-      links: [{ id: 'bookmarked-notes', label: 'Bookmarked notes', icon: 'bookmark' }, { id: 'my-reflections', label: 'My reflections', icon: 'feather' }, { id: 'reading-settings', label: 'Reading settings', icon: 'compass' }],
+      stats: [{ value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
+      // Rows return with their surfaces: reflections (batch 7) and reading
+      // settings (batch 8). A button with nothing behind it is worse than a
+      // missing row.
+      links: [],
     },
   }
 }
 
 export async function getHomeData() {
-  const [lessons, sermons, prayers] = await Promise.all([getLessons(), getSermons(), getPrayerPoints()])
-  return { lesson: lessons[0], sermon: sermons[0], prayer: prayers[0] }
+  const [lesson, sermons, prayers] = await Promise.all([getLatestLesson(), getSermons(1), getPrayerPoints(1)])
+  return { lesson, sermon: sermons[0], prayer: prayers[0] }
 }

@@ -48,10 +48,10 @@ export default function ClassManageView({ ledClass, roster, candidates }: { ledC
   }
 
   return <div className="page-wrap"><Header /><main>
-    <section className="page-intro"><Meta>CLASS MANAGEMENT</Meta><h1>{ledClass.name}</h1>{ledClass.description && <p>{ledClass.description}</p>}</section>
+    <section className="page-intro"><h1>{ledClass.name}</h1>{ledClass.description && <p>{ledClass.description}</p>}</section>
 
     <article className="paper-card member-card">
-      <div className="member-card-head"><h2>Roster</h2><Meta>{roster.length === 1 ? '1 MEMBER' : `${roster.length} MEMBERS`}</Meta></div>
+      <div className="member-card-head"><h2>Roster</h2><Meta>{roster.length === 1 ? '1 member' : `${roster.length} members`}</Meta></div>
 
       <div className="class-roster">
         {roster.length

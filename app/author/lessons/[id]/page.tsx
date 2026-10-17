@@ -9,13 +9,13 @@ export default async function EditLessonPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const role = await getCurrentRole()
   if (role === null) redirect(`/auth/sign-in?next=/author/lessons/${id}`)
-  if (role !== 'admin' && role !== 'class_leader') return <AppShell><div className="page-wrap"><Header /><main><EmptyState eyebrow="LESSON AUTHORING" title="Not permitted" body="You do not have permission to write lessons." /></main></div></AppShell>
+  if (role !== 'admin' && role !== 'class_leader') return <AppShell><div className="page-wrap"><Header /><main><EmptyState title="Not permitted" body="You do not have permission to write lessons." /></main></div></AppShell>
 
   const led = role === 'class_leader' ? await getMyLedClass() : null
   if (led && led.status !== 'ready') return <AppShell><div className="page-wrap"><Header /><main>
     {led.status === 'inactive'
-      ? <EmptyState eyebrow="LESSON AUTHORING" title="Class inactive" body={`${led.name} has been deactivated. An administrator needs to reactivate it before you can write its lessons.`} />
-      : <EmptyState eyebrow="LESSON AUTHORING" title="No class assigned" body="An administrator has not assigned you to lead a class yet." />}
+      ? <EmptyState title="Class inactive" body={`${led.name} has been deactivated. An administrator needs to reactivate it before you can write its lessons.`} />
+      : <EmptyState title="No class assigned" body="An administrator has not assigned you to lead a class yet." />}
   </main></div></AppShell>
   const ledClass = led && led.status === 'ready' ? led.class : null
 

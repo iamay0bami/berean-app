@@ -210,7 +210,7 @@ export default function LessonForm({ lesson, classOptions, fixedClass }: { lesso
   }
 
   return <div className="page-wrap"><Header /><main>
-    <section className="page-intro"><Meta>LESSON AUTHORING</Meta><h1>{lesson ? 'Edit lesson' : 'New lesson'}</h1><p>{lesson ? 'Change anything and save, or change the lesson’s status.' : 'Write a lesson, save it as a draft, and publish it when it is ready.'}</p></section>
+    <section className="page-intro"><h1>{lesson ? 'Edit lesson' : 'New lesson'}</h1><p>{lesson ? 'Change anything and save, or change the lesson’s status.' : 'Write a lesson, save it as a draft, and publish it when it is ready.'}</p></section>
 
     <form className="paper-card class-form" onSubmit={submit}>
       {fixedClass

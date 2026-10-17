@@ -7,13 +7,20 @@ values, the reasons and the traps.
 Do not re-open the direction in an implementation task. If something here is
 wrong, change it here first, then in the code — one edit, in that order.
 
-> **This document is written ahead of the code.** It was agreed before Batch 0a,
-> so §1–§8 describe the **target** state: `.btn`, `.card`, `.field`, `.badge`,
-> `.row`, `.empty`, `.sheet`, `FormHeader` and the token names below do **not all
-> exist in `globals.css` yet** — they arrive with Batch 0a and 0b. Read this as
-> the spec those batches implement, not as a description of what is on screen
-> today. Once 0b lands, §1–§8 are a description, and §11's "nothing aspirational"
-> rule starts applying.
+> **Batches 1a, 0a, 0b and 1b have landed.** The tokens (§1–§5) and primitives
+> (§6) in this document exist in `globals.css`, and the chrome in §8 —
+> `Header`, `ReadingHeader`, `FormHeader`, `AuthHeader`, the theme toggle and
+> the sliding nav indicator — exists in `components/`. The honesty pass is
+> closed: the bell, the dead heart/share/bookmark affordances, the invented
+> figures and the decorative eyebrows are gone, and every figure left on screen
+> traces to a query or a prop.
+>
+> Read §1–§8 as a description of the system as it is. §9/§11 remain the screen
+> plan, and these surfaces are deliberately **not yet built** until their own
+> change: the lesson composer (`createInsight`), the Profile library rows
+> (`Edit profile`, reflections, reading settings), the sermon sub-tabs, the
+> class detail route, and the cloth (`CoverCloth`). Nothing in §6 is
+> aspirational.
 
 ---
 
@@ -764,9 +771,9 @@ does.**
    stub on the `/home` card, the current-lesson marker in rows, a truthful
    `CONTINUE READING`, the `LESSONS` stat, and an honest `% READ`. Together with
    item 1 this is the **full four-instance ribbon system**.
-3. **Reflections as a real surface.** The library section ships in the redesign;
-   missing is editing your own past thoughts (`updateInsight` and `deleteInsight`
-   exist, unused) and attaching a thought to a specific question.
+3. **Reflections as a real surface.** No library rows render yet: the list
+   (`insights` where `author_id = you`, joined to lesson titles) and editing
+   (`updateInsight` / `deleteInsight` exist, unused) both wait for their batch.
 4. **Reading settings that sync across devices.** Cookies cover one device; a
    `reading_settings` table carries them across.
 5. **Hearting.** `insights.hearts` and `discussions.hearts` are real columns with
@@ -782,8 +789,13 @@ does.**
 9. **Author-supplied cover photography.** A nullable `cover_url` on `classes`,
    `sermons` and `lessons`, cloth as the fallback, `next/image` with explicit
    dimensions, and a decision about `images.unoptimized: true`.
-10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections built
-    now are the content that would move.
+10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections
+    built then are the content that would move.
+
+**Scaffolding currently in the tree:** `components/cover-cloth.tsx` and the
+admin-only `/dev/cloth` preview route exist as the cloth gate. No production
+screen renders a plate yet, and both the route and its scaffolding CSS are
+deleted when the plates land.
 
 ---
 

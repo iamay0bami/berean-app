@@ -15,6 +15,14 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  // Scaffolding routes are admin-only, and a 404 (rather than a redirect) keeps
+  // them undiscoverable. /dev/cloth is deleted with the cloth batch.
+  const devPath = request.nextUrl.pathname === '/dev' || request.nextUrl.pathname.startsWith('/dev/')
+  if (devPath) {
+    if (!user) return new NextResponse(null, { status: 404 })
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if (profile?.role !== 'admin') return new NextResponse(null, { status: 404 })
+  }
   // Org-scoped RLS means a signed-out visitor resolves to no organization and would
   // otherwise see empty content lists, so these paths now require a session too.
   const privatePaths = ['/profile', '/discuss', '/home', '/classes', '/sermons']
@@ -29,5 +37,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/discuss/:path*', '/home/:path*', '/classes/:path*', '/sermons/:path*'],
+  matcher: ['/profile/:path*', '/discuss/:path*', '/home/:path*', '/classes/:path*', '/sermons/:path*', '/dev/:path*'],
 }
