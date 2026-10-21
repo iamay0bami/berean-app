@@ -8,12 +8,14 @@ import { getActiveClasses, getCurrentRole, getSermons } from '@/lib/mock-data'
 // them. Reviewed before any screen renders a plate, then deleted with the route.
 
 const SIZES = [
-  { id: 'card', label: '16:9 card', width: 320, height: 180, round: false },
-  { id: 'header', label: '4:5 class header', width: 200, height: 250, round: false },
-  { id: 'letterbox', label: '16:9 sermon letterbox', width: 240, height: 135, round: false },
-  { id: 'band', label: '6px lesson band', width: 200, height: 6, round: false },
-  { id: 'edge', label: '3px row edge', width: 200, height: 3, round: false },
-  { id: 'bookplate', label: 'bookplate ring', width: 78, height: 78, round: true },
+  { id: 'card', label: '16:9 card', width: 320, height: 180, round: false, variant: 'plate' },
+  { id: 'header', label: '4:5 class header', width: 200, height: 250, round: false, variant: 'plate' },
+  { id: 'letterbox', label: '16:9 sermon letterbox', width: 240, height: 135, round: false, variant: 'plate' },
+  { id: 'thumb', label: '44px row thumb', width: 44, height: 44, round: false, variant: 'thumb' },
+  { id: 'band', label: '6px lesson band', width: 200, height: 6, round: false, variant: 'strip' },
+  { id: 'edge', label: '3px row edge', width: 200, height: 3, round: false, variant: 'strip' },
+  { id: 'spine', label: '6px vertical spine', width: 6, height: 90, round: false, variant: 'spine' },
+  { id: 'bookplate', label: 'bookplate ring', width: 78, height: 78, round: true, variant: 'plate' },
 ] as const
 
 const THEMES = ['light', 'dark'] as const
@@ -37,7 +39,9 @@ export default async function ClothPreviewPage() {
           Six grounds × eight motifs at the app&apos;s real sizes, seeded from real ids
           ({realSeeds.length ? `${realSeeds.length} live ids` : 'static seeds — the database is empty'}).
           The grounds must stay distinct at 3px, the deep plates must sit on the light
-          surface, and no motif may read as a logo or a flag.
+          surface, and no motif may read as a logo or a flag. Strips and the spine use
+          their own art — a square plate squeezed into 3px is noise — so judge the band
+          and edge from the motif row, not from the plate above it.
         </p>
 
         <div className="cloth-themes">
@@ -59,6 +63,31 @@ export default async function ClothPreviewPage() {
                 ))}
               </div>
 
+              <h3 className="cloth-subheading">Band (6px) and edge (3px), every motif</h3>
+              <div className="cloth-grid">
+                {CLOTH_MOTIFS.map((motif, motifIndex) => (
+                  <figure className="cloth-swatch" key={`strip-${motif}`}>
+                    <div className="cloth-frame" style={{ inlineSize: 160, blockSize: 6 }}>
+                      <CoverCloth
+                        seed={seeds[motifIndex % seeds.length]}
+                        ground={motifIndex % CLOTH_GROUNDS.length}
+                        motif={motifIndex}
+                        variant="strip"
+                      />
+                    </div>
+                    <div className="cloth-frame" style={{ inlineSize: 160, blockSize: 3 }}>
+                      <CoverCloth
+                        seed={seeds[motifIndex % seeds.length]}
+                        ground={motifIndex % CLOTH_GROUNDS.length}
+                        motif={motifIndex}
+                        variant="strip"
+                      />
+                    </div>
+                    <figcaption className="cloth-label">{motif}</figcaption>
+                  </figure>
+                ))}
+              </div>
+
               {SIZES.slice(1).map(size => (
                 <div key={size.id}>
                   <h3 className="cloth-subheading">{size.label}</h3>
@@ -73,7 +102,12 @@ export default async function ClothPreviewPage() {
                             borderRadius: size.round ? '50%' : undefined,
                           }}
                         >
-                          <CoverCloth seed={seeds[groundIndex % seeds.length]} ground={groundIndex} motif={groundIndex} />
+                          <CoverCloth
+                            seed={seeds[groundIndex % seeds.length]}
+                            ground={groundIndex}
+                            motif={groundIndex}
+                            variant={size.variant}
+                          />
                         </div>
                         <figcaption className="cloth-label">ground {groundIndex + 1}</figcaption>
                       </figure>

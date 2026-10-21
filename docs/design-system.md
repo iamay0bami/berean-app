@@ -229,7 +229,7 @@ Hanken Grotesk is not; if the Yoruba gate below fails, ship Inter and record it.
 ### 2.1 Subsets — Yoruba is the reason
 
 ```ts
-subsets: ['latin', 'latin-ext', 'vietnamese']
+subsets: ['latin']
 ```
 
 `AGENTS.md` says latin + latin-ext. That is **incomplete for Yoruba**: `ṣ` is
@@ -237,6 +237,14 @@ U+1E63 (latin-ext ✓), but **`ẹ` U+1EB9 and `ọ` U+1ECD live in Google's
 *vietnamese* block** (U+1EA0–1EF9), as do the combining tone marks U+0300/U+0301.
 Requesting only two subsets leaves Yoruba text in a fallback face with the wrong
 weight and shape. Verify in a **production** build.
+
+**`subsets` controls preloading, not what is fetched.** `next/font` fetches the
+full CSS2 response — every subset Google returns for the family, each with its
+own `unicode-range` — and marks only the named subsets' files for preload. So
+`subsets: ['latin']` on both families preloads two woff2 files, while the
+latin-ext and vietnamese faces stay in the stylesheet and download only when a
+glyph needs them. That is why Yoruba still renders in Fraunces and Hanken
+Grotesk, and why no second font instance is needed.
 
 **The gate.** Render this at 14px, 16px and 19px, in both families, in both
 themes, and inspect — a fallback face shows as a weight and shape mismatch:
@@ -649,10 +657,23 @@ indigo adire and aso-oke:
 
 ```
 seed ─┬─ ground     : one of 6, from the cloth arc only (§7.2)
-      ├─ motif      : one of 8 (arcs, comb, chevron, dot grid, diamond, wave, star, cross-band)
+      ├─ motif      : one of 8 (arcs, comb, chevron, dot grid, diamond, wave, scallop, cross-band)
       ├─ rhythm     : stripe count 3–9, from a second hash of the seed
       └─ rotation   : 0° / 90° / 180°, so two same-motif plates never mirror exactly
 ```
+
+One seed, four variants, so a class's plate and its small marks agree:
+
+| Variant | ViewBox | Used for |
+| --- | --- | --- |
+| `plate` (default) | `0 0 100 100` | 16:9 cards, 4:5 class header, sermon letterbox, bookplate ring |
+| `strip` | `0 0 100 8`, `preserveAspectRatio="none"` | the 6px lesson band and the 3px library-row edge |
+| `spine` | `0 0 8 100`, strip art rotated 90° | a 6px vertical spine |
+| `thumb` | `0 0 100 100` | the 44px row thumb — rhythm capped at 4, strokes at 5 |
+
+Strips and spines carry **their own art**, drawn as filled shapes in a 100 × 8
+box: a square plate squeezed into 3px is noise, and a hairline stroke in an
+8-unit-tall box vanishes at that size.
 
 Constraints for low-end Android: **≤30 SVG nodes per plate**, no filters, no
 gradients-with-blur, no animation, integer coordinates. Deterministic, so a class
@@ -663,9 +684,12 @@ keeps its cloth forever and people learn to recognise it.
 Brass means *your place*, sage means *the room*, clay means *destructive*. If any
 of them also appeared as a cloth colour, the meanings would dissolve.
 
-- Grounds live **only on the indigo → blue-violet → violet → plum → aubergine arc,
-  plus one undyed neutral**: `#283A63`, `#39386B`, `#4A3568`, `#573453`,
-  `#45273E`, and stone `#4A4741`.
+- Grounds live **only on the indigo → blue-violet → violet → plum → teal arc**,
+  spanning roughly 16–42% lightness so no two plates read alike at 3px:
+  `#1B2438` (deep indigo), `#283A63` (indigo), `#3A3A78` (blue-violet),
+  `#5B4691` (violet, the lightest), `#6B3C5E` (plum), `#173F45` (deep teal).
+  The old undyed stone ground is gone: at 3px it read as a second neutral rather
+  than as a cloth, and deep teal holds its distance from sage (≈62° in hue).
 - **No cloth plate may contain brass, sage or clay at all**, in ground or motif.
   The motif ink is a lighter step of its own ground, paired in the generator's map
   so no CSS colour mixing is involved.
@@ -690,9 +714,11 @@ fallback so nothing renders empty. `next.config.mjs` sets
 ### 7.4 The preview sheet is a gate
 
 Before any screen renders a plate, `/dev/cloth` renders **every ground × every
-motif** at the real sizes (16:9 card, 4:5 header, 16:9 letterbox, 6px band, 3px
-row edge, bookplate ring), seeded with **real ids from the database**, in **both
-themes** side by side.
+motif** at the real sizes (16:9 card, 4:5 header, 16:9 letterbox, 44px thumb,
+6px band, 3px row edge, 6px vertical spine, bookplate ring), seeded with **real
+ids from the database**, in **both themes** side by side. Bands and edges are
+shown for every motif, because the strip art is drawn separately from the plate
+art and cannot be judged from the plate.
 
 `proxy.ts` gates a fixed list, so `/dev/cloth` is public unless added to that
 list. **Put it in the gate behind an admin check, and delete the route at the end

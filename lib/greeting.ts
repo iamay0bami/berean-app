@@ -40,7 +40,6 @@ export function timeOfDay(timeZone: string, now = new Date()): TimeOfDay {
 export function dateLabel(timeZone: string, now = new Date()): string {
   return new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long', month: 'long', day: 'numeric' })
     .format(now)
-    .toUpperCase()
 }
 
 // Every template carries a {name} token and belongs to exactly one of two shapes:
