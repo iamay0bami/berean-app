@@ -253,6 +253,11 @@ themes, and inspect — a fallback face shows as a weight and shape mismatch:
 Ẹ ọ ṣ ẹ́ ọ̀ ṣ́ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
 ```
 
+The temporary `/dev/cloth` gate implements this as `.cloth-type-grid`, with
+`.cloth-type-family` panels and `.cloth-type-row` samples. The family and size
+modifiers select the two font tokens and the existing 14px, 16px and 19px type
+tokens; all of these classes are deleted with the preview route.
+
 ### 2.2 Roles and scale (rem, root 16px)
 
 | Token | Size / line-height | Family | Weight | Used for |

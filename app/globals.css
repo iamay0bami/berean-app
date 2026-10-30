@@ -343,6 +343,17 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 500;
 .cloth-scope--light { --bg: var(--paper-100); --bg-raised: var(--white); --text: var(--ink-900); --text-muted: var(--ink-500); --line: var(--paper-300); color-scheme: light; }
 .cloth-scope--dark { --bg: var(--indigo-950); --bg-raised: var(--indigo-900); --text: var(--lamp-100); --text-muted: var(--slate-400); --line: var(--indigo-700); color-scheme: dark; }
 .cloth-grid { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.cloth-type-grid { display: grid; gap: var(--space-3); }
+.cloth-type-family { display: grid; gap: var(--space-2); min-inline-size: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-raised); }
+.cloth-type-family-name { margin: 0; font: 600 var(--text-label)/1.3 var(--font-sans); color: var(--text-muted); }
+.cloth-type-family--fraunces { font-family: var(--font-serif); }
+.cloth-type-family--hanken { font-family: var(--font-sans); }
+.cloth-type-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: var(--space-2); }
+.cloth-type-size { font: 600 var(--text-micro)/1.2 var(--font-sans); color: var(--text-muted); }
+.cloth-type-sample { min-inline-size: 0; margin: 0; overflow-wrap: anywhere; }
+.cloth-type-sample--14 { font-size: var(--text-ui); line-height: 1.45; }
+.cloth-type-sample--16 { font-size: var(--text-body); line-height: 1.55; }
+.cloth-type-sample--19 { font-size: var(--text-reading); line-height: 1.62; }
 .cloth-swatch { display: grid; gap: var(--space-1); margin: 0; }
 .cloth-frame { overflow: hidden; background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .cloth-label { font: 600 var(--text-micro)/1.2 var(--font-sans); color: var(--text-muted); }

@@ -20,6 +20,17 @@ const SIZES = [
 
 const THEMES = ['light', 'dark'] as const
 
+const YORUBA_RENDER_TEXT = 'Ẹ ọ ṣ ẹ́ ọ̀ ṣ́ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́'
+const YORUBA_RENDER_SIZES = [
+  { label: '14px', className: 'cloth-type-sample--14' },
+  { label: '16px', className: 'cloth-type-sample--16' },
+  { label: '19px', className: 'cloth-type-sample--19' },
+] as const
+const YORUBA_RENDER_FAMILIES = [
+  { label: 'Fraunces', className: 'cloth-type-family--fraunces' },
+  { label: 'Hanken Grotesk', className: 'cloth-type-family--hanken' },
+] as const
+
 export default async function ClothPreviewPage() {
   const role = await getCurrentRole()
   if (role !== 'admin') notFound()
@@ -48,6 +59,23 @@ export default async function ClothPreviewPage() {
           {THEMES.map(theme => (
             <section className={`cloth-scope cloth-scope--${theme}`} key={theme}>
               <h2 className="cloth-heading">{theme === 'light' ? 'Day room' : 'Lamplit room'}</h2>
+
+              <h3 className="cloth-subheading">Yoruba render test</h3>
+              <div className="cloth-type-grid">
+                {YORUBA_RENDER_FAMILIES.map(family => (
+                  <section className={`cloth-type-family ${family.className}`} key={family.label}>
+                    <h4 className="cloth-type-family-name">{family.label}</h4>
+                    {YORUBA_RENDER_SIZES.map(size => (
+                      <div className="cloth-type-row" key={size.label}>
+                        <span className="cloth-type-size">{size.label}</span>
+                        <p className={`cloth-type-sample ${size.className}`}>
+                          {YORUBA_RENDER_TEXT}
+                        </p>
+                      </div>
+                    ))}
+                  </section>
+                ))}
+              </div>
 
               <h3 className="cloth-subheading">Ground × motif, 16:9 card</h3>
               <div className="cloth-grid">
