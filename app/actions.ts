@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { LESSON_HAS_INSIGHTS } from '@/lib/messages'
+import { normalizeHumanText, normalizeHumanTextArray, normalizeOptionalHumanText } from '@/lib/text'
 import type { ClassLeader } from '@/lib/types'
 
 const GENERIC_SIGN_IN_ERROR = 'Invalid email/username or password'
@@ -71,7 +72,7 @@ const WRITE_DENIED_SERMON = "You can't publish this sermon."
 const WRITE_DENIED_PRAYER_POINT = "You can't publish this prayer point."
 
 function requireText(value: string) {
-  const text = value.trim()
+  const text = normalizeHumanText(value)
   if (!text) throw new Error('Text is required')
   return text
 }
@@ -225,7 +226,11 @@ export async function removePrayerConfirmation(prayerPointId: string): Promise<{
 export async function updateMyProfile(name: string, initials: string, tagline: string): Promise<{ error: string | null }> {
   try {
     const { supabase } = await userClient()
-    const { error } = await supabase.rpc('update_my_profile', { new_name: requireText(name), new_initials: requireText(initials), new_tagline: tagline.trim() })
+    const { error } = await supabase.rpc('update_my_profile', {
+      new_name: requireText(name),
+      new_initials: requireText(initials),
+      new_tagline: normalizeHumanText(tagline),
+    })
     if (error) return { error: error.message }
     revalidatePath('/profile')
     return { error: null }
@@ -297,9 +302,9 @@ export type LessonInput = {
 function validateLessonInput(input: LessonInput): { error: string } | { error: null; fields: LessonInput } {
   const classId = input.class_id.trim()
   if (!classId) return { error: 'A class is required.' }
-  const title = input.title.trim()
+  const title = normalizeHumanText(input.title)
   if (!title) return { error: 'A title is required.' }
-  const week = input.week.trim()
+  const week = normalizeHumanText(input.week)
   if (!week) return { error: 'A week is required.' }
   const number = input.number.trim()
   if (!number) return { error: 'A lesson number is required.' }
@@ -308,7 +313,7 @@ function validateLessonInput(input: LessonInput): { error: string } | { error: n
   // "01", "3a" anywhere. The form's min/max already bound this; the action is the boundary
   // that enforces it, and stripping the leading zeros here is what closes the "003" hole.
   if (!/^\d{1,2}$/.test(number) || parseInt(number, 10) < 1) return { error: 'Lesson numbers run from 1 to 99.' }
-  const paragraphs = input.paragraphs.map(part => part.trim()).filter(Boolean)
+  const paragraphs = normalizeHumanTextArray(input.paragraphs)
   if (!paragraphs.length) return { error: 'At least one paragraph is required.' }
   return {
     error: null,
@@ -317,13 +322,13 @@ function validateLessonInput(input: LessonInput): { error: string } | { error: n
       week,
       number: String(parseInt(number, 10)).padStart(2, '0'),
       title,
-      excerpt: input.excerpt.trim(),
-      duration: input.duration.trim(),
-      section_label: input.section_label.trim(),
-      quote: input.quote.trim(),
-      reference: input.reference.trim(),
+      excerpt: normalizeHumanText(input.excerpt),
+      duration: normalizeHumanText(input.duration),
+      section_label: normalizeHumanText(input.section_label),
+      quote: normalizeHumanText(input.quote),
+      reference: normalizeHumanText(input.reference),
       paragraphs,
-      margin_note: input.margin_note.trim(),
+      margin_note: normalizeHumanText(input.margin_note),
     },
   }
 }
@@ -480,7 +485,7 @@ export async function saveLessonQuestions(lessonId: string, questions: { id?: st
     const kept = new Set<string>()
     const now = new Date().toISOString()
     for (const question of questions) {
-      const text = question.text.trim()
+      const text = normalizeHumanText(question.text)
       // questions.text is NOT NULL with no default, and a blank row is not a question.
       if (!text) continue
       // An id we did not just read is treated as new, so an unknown or foreign id becomes
@@ -511,10 +516,23 @@ export async function saveLessonQuestions(lessonId: string, questions: { id?: st
   }
 }
 
+const SERMON_HUMAN_TEXT_FIELDS = ['detail_date', 'title', 'speaker', 'text', 'tag', 'margin_note', 'closing'] as const
+
+function normalizeSermonInput(input: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...input }
+  for (const field of SERMON_HUMAN_TEXT_FIELDS) {
+    if (typeof normalized[field] === 'string') normalized[field] = normalizeHumanText(normalized[field])
+  }
+  if (Array.isArray(normalized.paragraphs)) {
+    normalized.paragraphs = normalizeHumanTextArray(normalized.paragraphs.filter((value): value is string => typeof value === 'string'))
+  }
+  return normalized
+}
+
 export async function createSermon(input: Record<string, unknown>): Promise<{ error: string | null }> {
   try {
     const { supabase, user } = await userClient()
-    const { error } = await supabase.from('sermons').insert({ ...input, created_by: user.id })
+    const { error } = await supabase.from('sermons').insert({ ...normalizeSermonInput(input), created_by: user.id })
     if (error) return { error: error.message }
     revalidatePath('/sermons')
     return { error: null }
@@ -588,8 +606,7 @@ export async function createOrgInviteCode(): Promise<{ error: string | null; cod
 // omits the paragraph on null/empty — so collapse whitespace-only input to SQL NULL
 // rather than storing an empty string that reads the same but is a different value.
 function normalizeDescription(description?: string) {
-  const trimmed = description?.trim()
-  return trimmed ? trimmed : null
+  return normalizeOptionalHumanText(description)
 }
 
 // Classes are created by an admin; classes_admin_write (0006) enforces that, and
@@ -597,7 +614,7 @@ function normalizeDescription(description?: string) {
 // for these yet — they are validated from a signed-in session, so failures are returned
 // rather than thrown (Next.js redacts thrown Server Action messages in production).
 export async function createClass(name: string, description?: string): Promise<{ error: string | null; id: string | null }> {
-  const trimmed = name.trim()
+  const trimmed = normalizeHumanText(name)
   if (!trimmed) return { error: 'A class name is required.', id: null }
   try {
     const { supabase } = await userClient()
@@ -625,7 +642,7 @@ export async function createClass(name: string, description?: string): Promise<{
 }
 
 export async function updateClass(id: string, name: string, description?: string): Promise<{ error: string | null }> {
-  const trimmed = name.trim()
+  const trimmed = normalizeHumanText(name)
   if (!trimmed) return { error: 'A class name is required.' }
   try {
     const { supabase } = await userClient()

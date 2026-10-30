@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { normalizeHumanText } from '@/lib/text'
 import { signInWithIdentifier } from '@/app/actions'
 import PasswordField from '@/components/password-field'
 
@@ -109,14 +110,14 @@ export default function AuthForm({ mode, next, notice, invite }: { mode: 'sign-i
       }
     }
 
-    const data: Record<string, string> = { name }
+    const data: Record<string, string> = { name: normalizeHumanText(name) }
     if (normalizedUsername) data.username = normalizedUsername
     if (joinMode === 'start') {
       if (!confirmedNewChurch) {
         setBusy(false)
         return setMessage("Confirm that you're setting up a new church.")
       }
-      const church = orgName.trim()
+      const church = normalizeHumanText(orgName)
       if (!church) {
         setBusy(false)
         return setMessage('Enter your church name.')

@@ -1,8 +1,25 @@
 import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassLeader, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, Lesson, LessonEdit, LessonEditQuestion, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
+import { normalizeHumanText, normalizeHumanTextArray, normalizeOptionalHumanText } from '@/lib/text'
 
 type Display = { id: string; name: string; initials: string }
 type AuthorRow = { author_id: string }
+
+function normalizeDisplay(display: Display): Display {
+  return {
+    ...display,
+    name: normalizeHumanText(display.name),
+    initials: normalizeHumanText(display.initials),
+  }
+}
+
+function normalizeActiveClass(row: ActiveClass): ActiveClass {
+  return {
+    ...row,
+    name: normalizeHumanText(row.name),
+    description: normalizeOptionalHumanText(row.description),
+  }
+}
 
 function relativeTime(value: string) {
   const seconds = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 1000))
@@ -17,7 +34,7 @@ async function displaysFor(rows: AuthorRow[]) {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('member_display', { member_ids: ids })
   if (error) throw error
-  return new Map((data as Display[]).map(display => [display.id, display]))
+  return new Map((data as Display[]).map(normalizeDisplay).map(display => [display.id, display]))
 }
 
 async function getSessionUser() {
@@ -38,7 +55,7 @@ export type Viewer = { role: ViewerRole; firstName: string | null }
 // The first whitespace-delimited word of profiles.name, or null when the row is
 // missing or the name is blank. The 'friend' fallback belongs to the greeting, not here.
 function firstNameOf(name: string | null | undefined) {
-  return (name ?? '').trim().split(/\s+/)[0] || null
+  return normalizeHumanText(name ?? '').split(/\s+/)[0] || null
 }
 
 // Role and first name in one pass. This is the home page's only viewer read — the
@@ -72,7 +89,7 @@ export async function getActiveClasses(): Promise<ActiveClass[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.from('classes').select('id,name,description').eq('active', true).order('name')
   if (error) throw error
-  return (data ?? []) as ActiveClass[]
+  return ((data ?? []) as ActiveClass[]).map(normalizeActiveClass)
 }
 
 // Deliberately separate from getActiveClasses() rather than a widening of it: that function
@@ -89,7 +106,10 @@ export async function getAdminClasses(): Promise<AdminClass[]> {
   // lessons_leader_read (0006) passes for an admin through is_class_leader_for, so drafts are
   // included — which is what "no lessons of any status" for a delete requires.
   return ((data ?? []) as any[]).map(row => ({
-    id: row.id, name: row.name, description: row.description, active: row.active,
+    id: row.id,
+    name: normalizeHumanText(row.name),
+    description: normalizeOptionalHumanText(row.description),
+    active: row.active,
     lessonCount: row.lessons?.[0]?.count ?? 0,
   }))
 }
@@ -101,14 +121,20 @@ export async function getMyClasses(): Promise<Pick<ActiveClass, 'id' | 'name'>[]
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_my_classes')
   if (error) throw error
-  return (data ?? []) as Pick<ActiveClass, 'id' | 'name'>[]
+  return ((data ?? []) as Pick<ActiveClass, 'id' | 'name'>[]).map(row => ({
+    ...row,
+    name: normalizeHumanText(row.name),
+  }))
 }
 
 export async function getAdminMembers(): Promise<AdminMember[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('admin_list_members')
   if (error) throw error
-  return (data ?? []) as AdminMember[]
+  return ((data ?? []) as AdminMember[]).map(row => ({
+    ...row,
+    name: normalizeHumanText(row.name),
+  }))
 }
 
 // get_class_members() guards on admin-or-that-class's-leader and returns (id, name, initials)
@@ -118,7 +144,11 @@ export async function getClassMembers(classId: string): Promise<ClassMember[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_class_members', { target_class_id: classId })
   if (error) throw error
-  return (data ?? []) as ClassMember[]
+  return ((data ?? []) as ClassMember[]).map(row => ({
+    ...row,
+    name: normalizeHumanText(row.name),
+    initials: normalizeHumanText(row.initials),
+  }))
 }
 
 // The complement of get_class_members(): org members with no row in class_memberships for
@@ -129,7 +159,11 @@ export async function getClassCandidates(classId: string): Promise<ClassMember[]
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_class_candidates', { target_class_id: classId })
   if (error) throw error
-  return (data ?? []) as ClassMember[]
+  return ((data ?? []) as ClassMember[]).map(row => ({
+    ...row,
+    name: normalizeHumanText(row.name),
+    initials: normalizeHumanText(row.initials),
+  }))
 }
 
 // 'none' is a leader with no assigned class; 'inactive' carries the name because the RPC is
@@ -146,8 +180,12 @@ export async function getMyLedClass(): Promise<LedClassResult> {
   if (error) throw error
   const row = (data ?? [])[0] as { id: string; name: string; description: string | null; active: boolean } | undefined
   if (!row) return { status: 'none' }
-  if (!row.active) return { status: 'inactive', name: row.name }
-  return { status: 'ready', class: { id: row.id, name: row.name, description: row.description } }
+  const className = normalizeHumanText(row.name)
+  if (!row.active) return { status: 'inactive', name: className }
+  return {
+    status: 'ready',
+    class: { id: row.id, name: className, description: normalizeOptionalHumanText(row.description) },
+  }
 }
 
 export async function getOrgInviteCode(): Promise<string | null> {
@@ -161,7 +199,11 @@ export async function getClassLeaders(): Promise<ClassLeader[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_class_leaders')
   if (error) throw error
-  return (data ?? []) as ClassLeader[]
+  return ((data ?? []) as ClassLeader[]).map(row => ({
+    ...row,
+    leader_name: normalizeHumanText(row.leader_name),
+    leader_initials: normalizeHumanText(row.leader_initials),
+  }))
 }
 
 function mapSermon(row: any): Sermon {
@@ -169,14 +211,14 @@ function mapSermon(row: any): Sermon {
   return {
     id: row.id,
     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    detailDate: row.detail_date || date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    title: row.title,
-    speaker: row.speaker,
-    text: row.text,
-    tag: row.tag,
-    paragraphs: row.paragraphs ?? [],
-    marginNote: row.margin_note,
-    closing: row.closing,
+    detailDate: normalizeHumanText(row.detail_date || date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })),
+    title: normalizeHumanText(row.title),
+    speaker: normalizeHumanText(row.speaker),
+    text: normalizeHumanText(row.text),
+    tag: normalizeHumanText(row.tag),
+    paragraphs: normalizeHumanTextArray(row.paragraphs),
+    marginNote: normalizeHumanText(row.margin_note),
+    closing: normalizeHumanText(row.closing),
   }
 }
 
@@ -186,13 +228,31 @@ async function mapLesson(row: any): Promise<Lesson> {
   if (insights.length) displays = await displaysFor(insights)
   const thoughts: LessonThought[] = insights.map(item => {
     const author = displays.get(item.author_id) ?? anonymousDisplay()
-    return { id: item.id, initials: author.initials, name: author.name, timestamp: relativeTime(item.created_at), text: item.text, hearts: item.hearts }
+    return {
+      id: item.id,
+      initials: author.initials,
+      name: author.name,
+      timestamp: relativeTime(item.created_at),
+      text: normalizeHumanText(item.text),
+      hearts: item.hearts,
+    }
   })
   return {
-    id: row.id, week: row.week, number: row.number, title: row.title, excerpt: row.excerpt,
-    duration: row.duration, progress: row.progress, sectionLabel: row.section_label,
-    quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [], marginNote: row.margin_note,
-    questions: (row.questions ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((question: any) => ({ id: question.id, text: question.text })),
+    id: row.id,
+    week: normalizeHumanText(row.week),
+    number: row.number,
+    title: normalizeHumanText(row.title),
+    excerpt: normalizeHumanText(row.excerpt),
+    duration: normalizeHumanText(row.duration),
+    progress: row.progress,
+    sectionLabel: normalizeHumanText(row.section_label),
+    quote: normalizeHumanText(row.quote),
+    reference: normalizeHumanText(row.reference),
+    paragraphs: normalizeHumanTextArray(row.paragraphs),
+    marginNote: normalizeHumanText(row.margin_note),
+    questions: (row.questions ?? [])
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((question: any) => ({ id: question.id, text: normalizeHumanText(question.text) })),
     thoughts,
   }
 }
@@ -244,7 +304,11 @@ export async function getAuthorLessons(classId?: string): Promise<AuthorLesson[]
   const query = supabase.from('lessons').select('id,class_id,week,number,title,status')
   const { data, error } = await (classId ? query.eq('class_id', classId) : query).order('number')
   if (error) throw error
-  return (data ?? []) as AuthorLesson[]
+  return ((data ?? []) as AuthorLesson[]).map(row => ({
+    ...row,
+    week: normalizeHumanText(row.week),
+    title: normalizeHumanText(row.title),
+  }))
 }
 
 // The authoring form's read: every editable field, plus each question's id, order and
@@ -272,12 +336,26 @@ export async function getLessonForEdit(id: string): Promise<LessonEdit | undefin
   // per question just to warn before a removal.
   const questions: LessonEditQuestion[] = ((row.questions ?? []) as any[])
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map(question => ({ id: question.id, text: question.text, insightCount: question.insights?.[0]?.count ?? 0 }))
+    .map(question => ({
+      id: question.id,
+      text: normalizeHumanText(question.text),
+      insightCount: question.insights?.[0]?.count ?? 0,
+    }))
   return {
-    id: row.id, class_id: row.class_id, week: row.week, number: row.number, title: row.title,
-    excerpt: row.excerpt, duration: row.duration, section_label: row.section_label,
-    quote: row.quote, reference: row.reference, paragraphs: row.paragraphs ?? [],
-    margin_note: row.margin_note, status: row.status as ContentStatus, questions,
+    id: row.id,
+    class_id: row.class_id,
+    week: normalizeHumanText(row.week),
+    number: row.number,
+    title: normalizeHumanText(row.title),
+    excerpt: normalizeHumanText(row.excerpt),
+    duration: normalizeHumanText(row.duration),
+    section_label: normalizeHumanText(row.section_label),
+    quote: normalizeHumanText(row.quote),
+    reference: normalizeHumanText(row.reference),
+    paragraphs: normalizeHumanTextArray(row.paragraphs),
+    margin_note: normalizeHumanText(row.margin_note),
+    status: row.status as ContentStatus,
+    questions,
     // The lesson-level total, which is NOT the sum of the counts above: a thought with a null
     // question_id (written without one, or orphaned when its question was deleted) counts here
     // and nowhere above. deleteLesson counts the same way, so this is what keeps the form's
@@ -311,7 +389,14 @@ export async function getPrayerPoints(limit?: number) {
   const displays = await displaysFor(rows)
   return rows.map((row: any): PrayerPoint => {
     const author = displays.get(row.author_id) ?? anonymousDisplay()
-    return { id: row.id, initials: author.initials, name: author.name, time: relativeTime(row.created_at), text: row.text, hearts: row.prayer_confirmations?.[0]?.count ?? row.hearts }
+    return {
+      id: row.id,
+      initials: author.initials,
+      name: author.name,
+      time: relativeTime(row.created_at),
+      text: normalizeHumanText(row.text),
+      hearts: row.prayer_confirmations?.[0]?.count ?? row.hearts,
+    }
   })
 }
 
@@ -328,9 +413,20 @@ export async function getDiscussionData(): Promise<DiscussionData> {
   const displays = await displaysFor(authorRows)
   const entries: DiscussionEntry[] = rows.map((row: any) => {
     const author = displays.get(row.author_id) ?? anonymousDisplay()
-    return { id: row.id, initials: author.initials, name: author.name, timestamp: relativeTime(row.created_at), text: row.text, hearts: row.hearts }
+    return {
+      id: row.id,
+      initials: author.initials,
+      name: author.name,
+      timestamp: relativeTime(row.created_at),
+      text: normalizeHumanText(row.text),
+      hearts: row.hearts,
+    }
   })
-  return { prompt: topic?.prompt ?? DEFAULT_DISCUSSION_PROMPT, entries, peopleCount: new Set(authorRows.map(row => row.author_id)).size }
+  return {
+    prompt: normalizeHumanText(topic?.prompt ?? DEFAULT_DISCUSSION_PROMPT),
+    entries,
+    peopleCount: new Set(authorRows.map(row => row.author_id)).size,
+  }
 }
 
 export type ProfileResult =
@@ -352,7 +448,11 @@ export async function getProfile(): Promise<ProfileResult> {
   return {
     status: 'ready',
     profile: {
-      initials: data.initials, memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`, name: data.name, tagline: data.tagline, role: data.role as AppRole,
+      initials: normalizeHumanText(data.initials),
+      memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`,
+      name: normalizeHumanText(data.name),
+      tagline: normalizeHumanText(data.tagline),
+      role: data.role as AppRole,
       stats: [{ value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
       // Rows return with their surfaces: reflections (batch 7) and reading
       // settings (batch 8). A button with nothing behind it is worse than a
