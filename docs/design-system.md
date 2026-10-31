@@ -237,53 +237,67 @@ Production loading is intentionally asymmetric:
 
 ```ts
 Fraunces({ subsets: ['latin'] })
-Hanken_Grotesk({ subsets: ['latin', 'latin-ext', 'vietnamese'] })
+localFont({
+  src: './fonts/hanken/HankenGrotesk-Yoruba.woff2',
+  variable: '--font-interface',
+  weight: '100 900',
+  display: 'swap',
+  preload: true,
+})
 ```
 
-Fraunces owns fixed English only. Hanken owns live content, so the production gate
-checks realistic Yoruba clusters across precomposed acute/grave forms and stacked
-marks rather than treating an invalid consonant-plus-tone sample as orthography.
+Fraunces owns fixed English only. The single combined local Hanken variable font
+owns live content, so base letters and combining marks cannot be separated by
+Google unicode-range files. The production gate checks realistic Yoruba clusters
+across precomposed acute/grave forms, decomposed mark sequences and plain letters
+rather than treating an invalid consonant-plus-tone sample as orthography.
 
-The admin-only `/dev/cloth` gate compares production Fraunces and Hanken with
-route-local `Source_Serif_4` and `Noto_Serif` controls. Both candidates request
-`latin`, `latin-ext` and `vietnamese` through the installed `next/font/google` API;
-neither ships on production screens in this batch.
+The admin-only `/dev/cloth` gate compares production Fraunces and local Hanken
+with a route-local Google-split `Hanken_Grotesk` control and route-local
+`Source_Serif_4` and `Noto_Serif` controls. All three Google controls request
+`latin`, `latin-ext` and `vietnamese`; none ships on production screens.
 
 Render the exact NFC string and inspect each difficult cluster at 14px, 16px and
 19px in both themes:
 
 ```
-Ń ń Ḿ ḿ Ǹ ǹ Ẹ́ Ọ̀ ẹ̄ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
+m̀ M̀ ḿ Ḿ ǹ Ǹ Ń ń Ẹ́ Ọ̀ ẹ̄ ṣ Ṣ ọ ẹ ị ụ ṅ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
 ```
 
-Also render individually inspectable `Ń`, `ń`, `Ḿ`, `ḿ`, `Ǹ`, `ǹ`, `Ẹ́`, `Ọ̀`
-and `ẹ̄`. Keep one separately labelled `ṣ́` row only as a known split-subset
-fallback; it is not valid Yoruba orthography because tone marks sit on vowels and
-syllabic nasals. A labelled NFD `n` + U+0301 diagnostic sits beside NFC `ń` to
-make the normalization requirement observable. Use Chrome Rendered Fonts and
-cold-cache network requests from a production build; record physical resources,
-mark placement, spacing, line metrics and exact transfer weights. NFC consistency
-is a data-integrity rule, not a shaping repair.
+Also render individually inspectable `m̀`, `M̀`, `ḿ`, `Ḿ`, `ǹ`, `Ǹ`, `Ń`, `ń`,
+`Ẹ́`, `Ọ̀`, `ẹ̄`, `ṣ`, `Ṣ`, `ọ`, `ẹ`, `ị`, `ụ` and `ṅ`. Keep `ɓ`, `ɗ`, `ƙ`
+and `₦` as separately labelled known-upstream-fallback rows. Keep one separately
+labelled `ṣ́` row only as a known split-subset fallback; it is not valid Yoruba
+orthography because tone marks sit on vowels and syllabic nasals. A labelled NFD
+`n` + U+0301 diagnostic sits beside NFC `ń` to make the normalization requirement
+observable. Use Chrome Rendered Fonts and cold-cache network requests from a
+production build; record physical resources, mark placement, spacing, line metrics
+and exact transfer weights. NFC consistency is a data-integrity rule, not a shaping
+repair.
 
 The gate also renders real profile/leader names in the Home greeting composition:
 fixed Fraunces greeting copy plus a Hanken name. In the measured real-name set,
 14px and 16px remained one line; the longest 19px sample wrapped to two lines but
 did not overflow.
 
-**Production result, 2026-10-31.** Chrome Rendered Fonts kept `Ń`, `ń`, `Ẹ́`,
-`Ọ̀` and `ẹ̄` entirely in Hanken Grotesk, but `Ḿ`, `ḿ`, `Ǹ` and `ǹ` fell back
-to Arial. The realistic NFC gate therefore still uses two physical families and
-the Hanken-only live-text contract remains blocked. The NFD `n` + U+0301
-diagnostic also fell back to Arial while NFC `ń` stayed in Hanken, confirming
-why write-boundary NFC normalization remains mandatory. The separately labelled,
-invalid-orthography `ṣ́` diagnostic continues to fall back to Arial.
+**Production result, 2026-10-31 — combined local Hanken.** Chrome Rendered
+Fonts kept all 18 realistic clusters entirely in Hanken Grotesk: `m̀`, `M̀`, `ḿ`,
+`Ḿ`, `ǹ`, `Ǹ`, `Ń`, `ń`, `Ẹ́`, `Ọ̀`, `ẹ̄`, `ṣ`, `Ṣ`, `ọ`, `ẹ`, `ị`, `ụ`
+and `ṅ`. The Hanken-only live-text contract therefore **passes**. The NFD `n` +
+U+0301 diagnostic and the separately labelled, invalid-orthography `ṣ́` row also
+stay in the combined Hanken file.
 
-Source Serif 4 and Noto Serif kept all nine realistic NFC clusters in their named
-families; Fraunces fell back to Times New Roman for the same four precomposed
-`m`/`n` forms that Hanken missed. All three serif controls fell back to Times New
-Roman for the NFD diagnostic and invalid `ṣ́` row. The reading serifs remain
-preview controls pending their separate decision; this result does not approve one
-for production. Do not begin Batch 3 screens while the Hanken gate is unresolved.
+The known upstream gaps `ɓ`, `ɗ`, `ƙ` and `₦` fall back to Arial; they are labelled
+as exceptions and are not part of the realistic Yoruba contract. In particular,
+both `ɓ` and `₦` were confirmed as browser fallbacks. The route-local Google-split
+control still falls back to Arial for `m̀`, `M̀`, `ḿ`, `Ḿ`, `ǹ`, `Ǹ`, `ṣ`, `Ṣ`,
+the NFD diagnostic and invalid `ṣ́`; it keeps the other ten realistic clusters in
+Hanken. This split-control failure and local-font pass isolate unicode-range
+splitting as the cause rather than Hanken's available Yoruba glyphs.
+
+Source Serif 4 and Noto Serif remain preview controls pending their separate
+reading-serif decision; passing the interface-font gate does not approve either
+serif or authorize Batch 3 screens.
 
 ### 2.2 Roles and scale (rem, root 16px)
 
@@ -326,22 +340,43 @@ validate `^[a-z][a-z0-9_]{2,19}$`, and enforce uniqueness on `lower(username)`.
 
 ### 2.5 Payload
 
-Fraunces preloads Latin only. Hanken preloads Latin, Latin Extended and Vietnamese.
-Source Serif 4 and Noto Serif exist only on the admin preview route.
+Fraunces preloads its Latin file. Production Hanken is one self-hosted variable
+WOFF2; the Google-split Hanken, Source Serif 4 and Noto Serif files exist only on
+the admin preview route.
 
-The production `/dev/cloth` manifest emitted these requested-subset WOFF2 files:
+The local asset is derived from the official Google Fonts OFL source at commit
+`6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec`:
 
-| Family | Files | Bytes | KiB |
-| --- | ---: | ---: | ---: |
-| Fraunces Latin | 1 | 36,560 | 35.7 |
-| Hanken Latin + Latin Extended + Vietnamese | 3 | 63,600 | 62.1 |
-| Source Serif 4 preview controls | 3 | 106,392 | 103.9 |
-| Noto Serif preview controls | 3 | 238,048 | 232.5 |
-| Admin preview total | 10 | 444,600 | 434.2 |
+- source: `https://github.com/google/fonts/blob/6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec/ofl/hankengrotesk/HankenGrotesk%5Bwght%5D.ttf`;
+- source SHA-256: `813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f`;
+- output: `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`, 48,268 bytes (47.1 KiB);
+- output SHA-256: `035c16d66e238e3b50747094e5a0040afb7d6e1e64db0fa86353d991df225c88`;
+- variable axis: `wght` 100–900; license: SIL OFL 1.1 in the adjacent `OFL.txt`.
 
-These are emitted file sizes from the production manifest, not a claim about a
-browser session. Rendered Fonts, cache behavior and transfer headers remain a
-manual authenticated-browser check.
+The exact one-off build command recorded in `app/fonts/hanken/PROVENANCE.md` is:
+
+```sh
+python build-hanken-yoruba.py "HankenGrotesk[wght].ttf" HankenGrotesk-Yoruba.woff2
+```
+
+The supplied asset and provenance files are immutable inputs to the app; fontTools
+and Brotli are not application dependencies.
+
+| Route / family | Scope | Files requested | Encoded bytes | KiB |
+| --- | --- | ---: | ---: | ---: |
+| Fraunces Latin | production | 1 | 36,560 | 35.7 |
+| Hanken combined variable | production | 1 | 48,268 | 47.1 |
+| `/home` production total | production | 2 | 84,828 | 82.8 |
+| Google control fonts beyond production | `/dev/cloth` only | 13 | 514,508 | 502.4 |
+| `/dev/cloth` total | admin preview | 15 | 599,336 | 585.3 |
+
+A cache-disabled production browser run returned HTTP 200 for every font request.
+`/home` transferred 85,428 bytes including response overhead; `/dev/cloth`
+transferred 603,836 bytes. The local Hanken response reported `content-length:
+48268`, `encodedBodySize: 48268` and `decodedBodySize: 48268` on both routes, with
+no service worker. These are measured browser requests; route manifests may list
+fewer preload candidates than the fonts ultimately requested by rendered control
+rows.
 
 ---
 

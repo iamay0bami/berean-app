@@ -1,17 +1,19 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Hanken_Grotesk } from 'next/font/google'
+import { Fraunces } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { readTheme } from '@/lib/theme'
 
 // Fraunces is limited to fixed English copy, so only its Latin file belongs on
-// the production critical path. Every live/user-authored value uses Hanken;
-// preload Latin, Latin Extended and Vietnamese so ṣ, ẹ, ọ and combining tones
-// stay in that one interface family. Candidate serifs live only on /dev/cloth.
+// the production critical path. Every live/user-authored value uses the combined
+// local Hanken file; split-font controls live only on /dev/cloth.
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' })
-const hanken = Hanken_Grotesk({
-  subsets: ['latin', 'latin-ext', 'vietnamese'],
+const hanken = localFont({
+  src: './fonts/hanken/HankenGrotesk-Yoruba.woff2',
   variable: '--font-interface',
+  weight: '100 900',
   display: 'swap',
+  preload: true,
 })
 
 export const metadata: Metadata = {

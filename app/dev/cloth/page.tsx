@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { Noto_Serif, Source_Serif_4 } from 'next/font/google'
+import { Hanken_Grotesk, Noto_Serif, Source_Serif_4 } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import {
   CLOTH_GROUNDS,
@@ -13,6 +13,13 @@ import {
 } from '@/components/cover-cloth'
 import { Header } from '@/components/shared'
 import { getClassLeaders, getClothPreviewData, getCurrentRole, getViewer } from '@/lib/mock-data'
+
+const hankenSplit = Hanken_Grotesk({
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
+  variable: '--font-hanken-split',
+  display: 'swap',
+  preload: false,
+})
 
 const sourceSerif = Source_Serif_4({
   subsets: ['latin', 'latin-ext', 'vietnamese'],
@@ -36,9 +43,18 @@ const HERO_SIZES = [
   { id: 'narrow', label: '320px viewport · 280×93', width: 280, height: 93 },
   { id: 'mobile', label: '360px viewport · 320×107', width: 320, height: 107 },
 ] as const
-const YORUBA_NFC = 'Ń ń Ḿ ḿ Ǹ ǹ Ẹ́ Ọ̀ ẹ̄ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́'.normalize('NFC')
+const YORUBA_NFC = 'm̀ M̀ ḿ Ḿ ǹ Ǹ Ń ń Ẹ́ Ọ̀ ẹ̄ ṣ Ṣ ọ ẹ ị ụ ṅ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́'.normalize('NFC')
 const YORUBA_NFD_DIAGNOSTIC = 'ń'
-const YORUBA_CLUSTERS = ['Ń', 'ń', 'Ḿ', 'ḿ', 'Ǹ', 'ǹ', 'Ẹ́', 'Ọ̀', 'ẹ̄'] as const
+const YORUBA_REALISTIC_CLUSTERS = [
+  'm̀', 'M̀', 'ḿ', 'Ḿ', 'ǹ', 'Ǹ', 'Ń', 'ń', 'Ẹ́', 'Ọ̀', 'ẹ̄',
+  'ṣ', 'Ṣ', 'ọ', 'ẹ', 'ị', 'ụ', 'ṅ',
+] as const
+const KNOWN_FONT_FALLBACKS = [
+  { cluster: 'ɓ', codePoint: 'U+0253' },
+  { cluster: 'ɗ', codePoint: 'U+0257' },
+  { cluster: 'ƙ', codePoint: 'U+0199' },
+  { cluster: '₦', codePoint: 'U+20A6' },
+] as const
 const KNOWN_SPLIT_SUBSET_FALLBACK = 'ṣ́'
 const TYPE_SIZES = [
   { label: '14px', className: 'cloth-type-sample--14' },
@@ -47,7 +63,8 @@ const TYPE_SIZES = [
 ] as const
 const TYPE_FAMILIES = [
   { label: 'Fraunces · production fixed English', className: 'cloth-type-family--fraunces' },
-  { label: 'Hanken Grotesk · production live text', className: 'cloth-type-family--hanken' },
+  { label: 'Hanken Grotesk · production local live text', className: 'cloth-type-family--hanken' },
+  { label: 'Hanken Grotesk · Google split control', className: 'cloth-type-family--hanken-split' },
   { label: 'Source Serif 4 · preview control', className: 'cloth-type-family--source' },
   { label: 'Noto Serif · preview control', className: 'cloth-type-family--noto' },
 ] as const
@@ -94,7 +111,7 @@ export default async function ClothPreviewPage() {
   ])]
 
   return (
-    <div className={`page-wrap cloth-page ${sourceSerif.variable} ${notoSerif.variable}`}>
+    <div className={`page-wrap cloth-page ${hankenSplit.variable} ${sourceSerif.variable} ${notoSerif.variable}`}>
       <Header />
       <main>
         <h1 className="cloth-title">Cover cloth</h1>
@@ -126,12 +143,23 @@ export default async function ClothPreviewPage() {
                       <span className="cloth-type-size">16px · NFD diagnostic · n + U+0301</span>
                       <p className="cloth-type-sample cloth-type-sample--16">{YORUBA_NFD_DIAGNOSTIC}</p>
                     </div>
-                    <div className="cloth-type-clusters">
-                      {YORUBA_CLUSTERS.map(cluster => <span className="cloth-type-cluster" key={cluster}>{cluster}</span>)}
+                    <div className="cloth-type-row cloth-type-row--clusters">
+                      <span className="cloth-type-size">Realistic Yoruba clusters</span>
+                      <div className="cloth-type-clusters">
+                        {YORUBA_REALISTIC_CLUSTERS.map(cluster => (
+                          <span className="cloth-type-cluster" data-cluster={cluster} data-cluster-kind="realistic" key={cluster}>{cluster}</span>
+                        ))}
+                      </div>
                     </div>
+                    {KNOWN_FONT_FALLBACKS.map(({ cluster, codePoint }) => (
+                      <div className="cloth-type-row cloth-type-row--known-font-fallback" key={cluster}>
+                        <span className="cloth-type-size">known upstream fallback · {codePoint}</span>
+                        <p className="cloth-type-sample cloth-type-sample--16" data-cluster={cluster} data-cluster-kind="known-fallback">{cluster}</p>
+                      </div>
+                    ))}
                     <div className="cloth-type-row cloth-type-row--known-fallback">
                       <span className="cloth-type-size">known split-subset fallback, not valid orthography</span>
-                      <p className="cloth-type-sample cloth-type-sample--16">{KNOWN_SPLIT_SUBSET_FALLBACK}</p>
+                      <p className="cloth-type-sample cloth-type-sample--16" data-cluster={KNOWN_SPLIT_SUBSET_FALLBACK} data-cluster-kind="invalid-orthography">{KNOWN_SPLIT_SUBSET_FALLBACK}</p>
                     </div>
                   </section>
                 ))}

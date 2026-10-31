@@ -93,15 +93,18 @@
   theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
 - Typography: Fraunces is limited to fixed English copy and loads the `latin`
   subset only. Hanken Grotesk renders every user-authored or database-authored
-  string and loads `latin`, `latin-ext` and `vietnamese`; Yoruba dotted letters
-  and combining tone marks must be checked in a production build. Do not route
-  fonts with `:lang()` unless persisted content gains a reliable language field.
-  Source Serif 4 and Noto Serif may appear only as admin-preview controls until
-  a separate reading-serif decision records Rendered Fonts behavior and exact
-  transfer weight. The current production gate keeps `Ń`, `ń`, `Ẹ́`, `Ọ̀` and
-  `ẹ̄` in Hanken but falls back to Arial for `Ḿ`, `ḿ`, `Ǹ`, `ǹ` and the NFD
-  `n` + U+0301 diagnostic. The Hanken-only Yoruba contract has not passed; do not
-  begin Batch 3 screens until that fallback is resolved.
+  string through the single self-hosted variable file
+  `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`; keep `--font-interface`, weight
+  100–900, `display: 'swap'` and preload enabled. The Google-split Hanken may
+  appear only as a route-local `/dev/cloth` control. Do not route fonts with
+  `:lang()` unless persisted content gains a reliable language field. Source
+  Serif 4 and Noto Serif may also appear only as admin-preview controls until a
+  separate reading-serif decision records Rendered Fonts behavior and exact
+  transfer weight. The 2026-10-31 production Rendered Fonts gate keeps all 18
+  realistic Yoruba clusters entirely in local Hanken, so the Hanken-only contract
+  passes. `ɓ`, `ɗ`, `ƙ` and `₦` remain labelled upstream gaps and fall back to
+  Arial. This clears only the interface-font gate; Batch 3 screens still require
+  explicit approval.
 - Icons: Lucide at the pinned exact version, one size scale, one stroke
   width. Every icon-only button has an accessible name. No second icon
   library without approval.
