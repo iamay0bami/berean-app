@@ -91,15 +91,29 @@
   `[data-theme]`, defaulting to `prefers-color-scheme`. The choice is stored
   in a cookie and applied on the server so there is no flash of the wrong
   theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
-- Typography: fonts load through `next/font` with the `latin`, `latin-ext` AND
-  `vietnamese` subsets. Content includes Yoruba: ẹ and ọ and the combining tone
-  marks live in the `vietnamese` block, not `latin-ext`. Verify in a production build.
+- Typography: Fraunces is limited to fixed English copy and loads the `latin`
+  subset only. Hanken Grotesk renders every user-authored or database-authored
+  string and loads `latin`, `latin-ext` and `vietnamese`; Yoruba dotted letters
+  and combining tone marks must be checked in a production build. Do not route
+  fonts with `:lang()` unless persisted content gains a reliable language field.
+  Source Serif 4 and Noto Serif may appear only as admin-preview controls until
+  a separate reading-serif decision records Rendered Fonts behavior and exact
+  transfer weight. The current production gate keeps `Ń`, `ń`, `Ẹ́`, `Ọ̀` and
+  `ẹ̄` in Hanken but falls back to Arial for `Ḿ`, `ḿ`, `Ǹ`, `ǹ` and the NFD
+  `n` + U+0301 diagnostic. The Hanken-only Yoruba contract has not passed; do not
+  begin Batch 3 screens until that fallback is resolved.
 - Icons: Lucide at the pinned exact version, one size scale, one stroke
   width. Every icon-only button has an accessible name. No second icon
   library without approval.
-- Glass: `backdrop-filter` surfaces only for navigation bars, sticky headers
-  and overlays, never for reading text. Each needs a solid fallback under
-  `@supports not (backdrop-filter: blur(1px))` and a capped blur radius.
+- Glass: real `backdrop-filter` is permitted only on `.bottom-nav` and
+  `.reading-header`; every other Batch 3 glass treatment—including the moving
+  nav capsule and cloth-caption plate—is faux and uses no filter. Class-detail
+  and authoring headers are solid. Declare an opaque background first, enable
+  the light `rgba(248, 247, 244, 0.92)` or dark `rgba(24, 32, 54, 0.94)` fill
+  with a capped 12px blur only inside standard/WebKit `@supports`, and restore
+  the opaque background under `prefers-reduced-transparency`. Unsupported and
+  old WebViews must retain the solid surface. Never place glass behind reading
+  text or a focused field, nest filtered surfaces, or animate blur.
 - Motion: CSS only unless approved. Transitions name their properties
   (never `transition: all`). `prefers-reduced-motion` is respected. At most
   one signature moment per screen; motion that answers a user action is
@@ -114,8 +128,8 @@
   hard-coded figure as if it were data. Wire it or remove it.
 - Reuse existing component classes before adding new ones. One name per
   concept. Document new component classes in `docs/design-system.md`.
-- Token values (custom properties) use hex and rgb() only. Never `color-mix()` or
-  `oklch()` inside a `--*` property: an unsupported value fails at use time with
+- Token values (custom properties) use hex, `rgb()` and comma-form `rgba()` only.
+  Never `color-mix()` or `oklch()` inside a `--*` property: an unsupported value fails at use time with
   no fallback. Gate any mix with `@supports`.
 - No CSS rule may target a bare element tag inside a component block
   (e.g. `.lesson-index > span`). Style by class.

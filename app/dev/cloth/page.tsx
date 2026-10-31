@@ -1,58 +1,109 @@
+import type { CSSProperties, ReactNode } from 'react'
+import { Noto_Serif, Source_Serif_4 } from 'next/font/google'
 import { notFound } from 'next/navigation'
-import { CoverCloth, CLOTH_GROUNDS, CLOTH_MOTIFS } from '@/components/cover-cloth'
+import {
+  CLOTH_GROUNDS,
+  CLOTH_MOTIFS,
+  CLOTH_ROTATIONS,
+  CoverCloth,
+  getCoverClothNodeCount,
+  getCoverClothSpec,
+  type ClothRotation,
+  type ClothVariant,
+} from '@/components/cover-cloth'
 import { Header } from '@/components/shared'
-import { getActiveClasses, getCurrentRole, getSermons } from '@/lib/mock-data'
+import { getClassLeaders, getClothPreviewData, getCurrentRole, getViewer } from '@/lib/mock-data'
 
-// A gate, not a surface. Every ground × motif at the sizes the app actually
-// uses, side by side in both themes, seeded with real ids where the database has
-// them. Reviewed before any screen renders a plate, then deleted with the route.
+const sourceSerif = Source_Serif_4({
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
+  variable: '--font-source-serif',
+  display: 'swap',
+})
 
-const SIZES = [
-  { id: 'card', label: '16:9 card', width: 320, height: 180, round: false, variant: 'plate' },
-  { id: 'header', label: '4:5 class header', width: 200, height: 250, round: false, variant: 'plate' },
-  { id: 'letterbox', label: '16:9 sermon letterbox', width: 240, height: 135, round: false, variant: 'plate' },
-  { id: 'thumb', label: '44px row thumb', width: 44, height: 44, round: false, variant: 'thumb' },
-  { id: 'band', label: '6px lesson band', width: 200, height: 6, round: false, variant: 'strip' },
-  { id: 'edge', label: '3px row edge', width: 200, height: 3, round: false, variant: 'strip' },
-  { id: 'spine', label: '6px vertical spine', width: 6, height: 90, round: false, variant: 'spine' },
-  { id: 'bookplate', label: 'bookplate ring', width: 78, height: 78, round: true, variant: 'plate' },
-] as const
+const notoSerif = Noto_Serif({
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
+  variable: '--font-noto-serif',
+  display: 'swap',
+})
 
 const THEMES = ['light', 'dark'] as const
-
-const YORUBA_RENDER_TEXT = 'Ẹ ọ ṣ ẹ́ ọ̀ ṣ́ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́'
-const YORUBA_RENDER_SIZES = [
+const COVER_SIZES = [
+  { id: 'mobile-min', label: '320px shelf · 126×168', width: 126, height: 168 },
+  { id: 'mobile', label: '360px shelf · 144×192', width: 144, height: 192 },
+  { id: 'tablet', label: '768px+ shelf · 168×224', width: 168, height: 224 },
+] as const
+const HERO_SIZES = [
+  { id: 'narrow', label: '320px viewport · 280×93', width: 280, height: 93 },
+  { id: 'mobile', label: '360px viewport · 320×107', width: 320, height: 107 },
+] as const
+const YORUBA_NFC = 'Ń ń Ḿ ḿ Ǹ ǹ Ẹ́ Ọ̀ ẹ̄ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́'.normalize('NFC')
+const YORUBA_NFD_DIAGNOSTIC = 'ń'
+const YORUBA_CLUSTERS = ['Ń', 'ń', 'Ḿ', 'ḿ', 'Ǹ', 'ǹ', 'Ẹ́', 'Ọ̀', 'ẹ̄'] as const
+const KNOWN_SPLIT_SUBSET_FALLBACK = 'ṣ́'
+const TYPE_SIZES = [
   { label: '14px', className: 'cloth-type-sample--14' },
   { label: '16px', className: 'cloth-type-sample--16' },
   { label: '19px', className: 'cloth-type-sample--19' },
 ] as const
-const YORUBA_RENDER_FAMILIES = [
-  { label: 'Fraunces', className: 'cloth-type-family--fraunces' },
-  { label: 'Hanken Grotesk', className: 'cloth-type-family--hanken' },
+const TYPE_FAMILIES = [
+  { label: 'Fraunces · production fixed English', className: 'cloth-type-family--fraunces' },
+  { label: 'Hanken Grotesk · production live text', className: 'cloth-type-family--hanken' },
+  { label: 'Source Serif 4 · preview control', className: 'cloth-type-family--source' },
+  { label: 'Noto Serif · preview control', className: 'cloth-type-family--noto' },
 ] as const
+
+function Frame({ width, height, round = false, children }: { width: number; height: number; round?: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={`cloth-frame${round ? ' cloth-frame--round' : ''}`}
+      style={{ inlineSize: width, blockSize: height } as CSSProperties}
+    >
+      {children}
+    </div>
+  )
+}
+
+function leaderSummary(names: string[]) {
+  if (!names.length) return 'Leader not assigned'
+  if (names.length === 1) return `Led by ${names[0]}`
+  return `Led by ${names[0]} +${names.length - 1}`
+}
 
 export default async function ClothPreviewPage() {
   const role = await getCurrentRole()
   if (role !== 'admin') notFound()
 
-  const [classes, sermons] = await Promise.all([getActiveClasses(), getSermons(12)])
-  const realSeeds = [...classes.map(item => item.id), ...sermons.map(item => item.id)]
-  const seeds = realSeeds.length
-    ? realSeeds
+  const [preview, viewer, classLeaders] = await Promise.all([
+    getClothPreviewData(),
+    getViewer(),
+    getClassLeaders(),
+  ])
+  const seeds = preview.seeds.length
+    ? preview.seeds
     : ['preview-class-one', 'preview-class-two', 'preview-lesson-one', 'preview-sermon-one']
+  const leadersByClass = new Map<string, string[]>()
+  for (const leader of classLeaders) {
+    const names = leadersByClass.get(leader.class_id) ?? []
+    names.push(leader.leader_name)
+    leadersByClass.set(leader.class_id, names)
+  }
+  for (const names of leadersByClass.values()) names.sort((left, right) => left.localeCompare(right))
+  const greetingNames = [...new Set([
+    ...(viewer.firstName ? [viewer.firstName] : []),
+    ...classLeaders.map(leader => leader.leader_name),
+  ])]
 
   return (
-    <div className="page-wrap cloth-page">
+    <div className={`page-wrap cloth-page ${sourceSerif.variable} ${notoSerif.variable}`}>
       <Header />
       <main>
         <h1 className="cloth-title">Cover cloth</h1>
         <p className="cloth-note">
-          Six grounds × eight motifs at the app&apos;s real sizes, seeded from real ids
-          ({realSeeds.length ? `${realSeeds.length} live ids` : 'static seeds — the database is empty'}).
-          The grounds must stay distinct at 3px, the deep plates must sit on the light
-          surface, and no motif may read as a logo or a flag. Strips and the spine use
-          their own art — a square plate squeezed into 3px is noise — so judge the band
-          and edge from the motif row, not from the plate above it.
+          Retained approval gate: production fonts, all six grounds, all eight motifs,
+          every production cover size, both real 3:1 crops, compact marks, captions,
+          default hashes and total SVG element counts. The page uses {preview.seeds.length
+            ? `${preview.seeds.length} real ids`
+            : 'static fallback ids because no readable rows exist'}.
         </p>
 
         <div className="cloth-themes">
@@ -60,98 +111,143 @@ export default async function ClothPreviewPage() {
             <section className={`cloth-scope cloth-scope--${theme}`} key={theme}>
               <h2 className="cloth-heading">{theme === 'light' ? 'Day room' : 'Lamplit room'}</h2>
 
-              <h3 className="cloth-subheading">Yoruba render test</h3>
-              <div className="cloth-type-grid">
-                {YORUBA_RENDER_FAMILIES.map(family => (
+              <h3 className="cloth-subheading">Yoruba shaping controls</h3>
+              <div className="cloth-type-grid" lang="yo">
+                {TYPE_FAMILIES.map(family => (
                   <section className={`cloth-type-family ${family.className}`} key={family.label}>
                     <h4 className="cloth-type-family-name">{family.label}</h4>
-                    {YORUBA_RENDER_SIZES.map(size => (
+                    {TYPE_SIZES.map(size => (
                       <div className="cloth-type-row" key={size.label}>
-                        <span className="cloth-type-size">{size.label}</span>
-                        <p className={`cloth-type-sample ${size.className}`}>
-                          {YORUBA_RENDER_TEXT}
-                        </p>
+                        <span className="cloth-type-size">{size.label} · NFC</span>
+                        <p className={`cloth-type-sample ${size.className}`}>{YORUBA_NFC}</p>
                       </div>
                     ))}
+                    <div className="cloth-type-row cloth-type-row--nfd">
+                      <span className="cloth-type-size">16px · NFD diagnostic · n + U+0301</span>
+                      <p className="cloth-type-sample cloth-type-sample--16">{YORUBA_NFD_DIAGNOSTIC}</p>
+                    </div>
+                    <div className="cloth-type-clusters">
+                      {YORUBA_CLUSTERS.map(cluster => <span className="cloth-type-cluster" key={cluster}>{cluster}</span>)}
+                    </div>
+                    <div className="cloth-type-row cloth-type-row--known-fallback">
+                      <span className="cloth-type-size">known split-subset fallback, not valid orthography</span>
+                      <p className="cloth-type-sample cloth-type-sample--16">{KNOWN_SPLIT_SUBSET_FALLBACK}</p>
+                    </div>
                   </section>
                 ))}
               </div>
 
-              <h3 className="cloth-subheading">Ground × motif, 16:9 card</h3>
-              <div className="cloth-grid">
-                {CLOTH_GROUNDS.flatMap((ground, groundIndex) => (
-                  CLOTH_MOTIFS.map((motif, motifIndex) => (
-                    <figure className="cloth-swatch" key={`${groundIndex}-${motifIndex}`}>
-                      <div className="cloth-frame" style={{ inlineSize: 112, blockSize: 63 }}>
-                        <CoverCloth seed={seeds[(groundIndex * CLOTH_MOTIFS.length + motifIndex) % seeds.length]} ground={groundIndex} motif={motifIndex} />
-                      </div>
-                      <figcaption className="cloth-label">{groundIndex + 1} · {motif}</figcaption>
-                    </figure>
-                  ))
-                ))}
-              </div>
-
-              <h3 className="cloth-subheading">Band (6px) and edge (3px), every motif</h3>
-              <div className="cloth-grid">
-                {CLOTH_MOTIFS.map((motif, motifIndex) => (
-                  <figure className="cloth-swatch" key={`strip-${motif}`}>
-                    <div className="cloth-frame" style={{ inlineSize: 160, blockSize: 6 }}>
-                      <CoverCloth
-                        seed={seeds[motifIndex % seeds.length]}
-                        ground={motifIndex % CLOTH_GROUNDS.length}
-                        motif={motifIndex}
-                        variant="strip"
-                      />
+              <h3 className="cloth-subheading">Real-name greeting composition</h3>
+              {greetingNames.length ? (
+                <div className="cloth-greeting-grid">
+                  {greetingNames.flatMap(name => TYPE_SIZES.map(size => (
+                    <div className="cloth-type-row" key={`${name}-${size.label}`}>
+                      <span className="cloth-type-size">{size.label}</span>
+                      <p className={`cloth-greeting ${size.className}`}>Good morning, <span className="cloth-greeting__name">{name}</span>.</p>
                     </div>
-                    <div className="cloth-frame" style={{ inlineSize: 160, blockSize: 3 }}>
-                      <CoverCloth
-                        seed={seeds[motifIndex % seeds.length]}
-                        ground={motifIndex % CLOTH_GROUNDS.length}
-                        motif={motifIndex}
-                        variant="strip"
-                      />
-                    </div>
-                    <figcaption className="cloth-label">{motif}</figcaption>
-                  </figure>
-                ))}
-              </div>
+                  )))}
+                </div>
+              ) : <p className="cloth-note">No readable real profile or leader names are available for this admin session.</p>}
 
-              {SIZES.slice(1).map(size => (
+              {COVER_SIZES.map((size, sizeIndex) => (
                 <div key={size.id}>
-                  <h3 className="cloth-subheading">{size.label}</h3>
+                  <h3 className="cloth-subheading">{size.label}{sizeIndex > 0 ? ' · captioned' : ''}</h3>
                   <div className="cloth-grid">
-                    {CLOTH_GROUNDS.map((ground, groundIndex) => (
-                      <figure className="cloth-swatch" key={`${size.id}-${groundIndex}`}>
-                        <div
-                          className="cloth-frame"
-                          style={{
-                            inlineSize: size.width,
-                            blockSize: size.height,
-                            borderRadius: size.round ? '50%' : undefined,
-                          }}
-                        >
-                          <CoverCloth
-                            seed={seeds[groundIndex % seeds.length]}
-                            ground={groundIndex}
-                            motif={groundIndex}
-                            variant={size.variant}
-                          />
-                        </div>
-                        <figcaption className="cloth-label">ground {groundIndex + 1}</figcaption>
-                      </figure>
+                    {CLOTH_GROUNDS.flatMap((_, groundIndex) => CLOTH_MOTIFS.map((motif, motifIndex) => {
+                      const sampleIndex = groundIndex * CLOTH_MOTIFS.length + motifIndex
+                      const classRow = preview.classes[sampleIndex % Math.max(1, preview.classes.length)]
+                      const title = classRow?.name ?? 'No active class row'
+                      const leaders = classRow ? leadersByClass.get(classRow.id) ?? [] : []
+                      return (
+                        <figure className="cloth-swatch" key={`${size.id}-${groundIndex}-${motif}`}>
+                          <div className="cloth-cover">
+                            <Frame width={size.width} height={size.height}>
+                              <CoverCloth
+                                seed={seeds[sampleIndex % seeds.length]}
+                                ground={groundIndex}
+                                motif={motifIndex}
+                                variant="cover"
+                                preview
+                              />
+                            </Frame>
+                            {sizeIndex > 0 && (
+                              <div className="cloth-caption">
+                                <p className="cloth-caption__title">{title}</p>
+                                <p className="cloth-caption__leaders">{leaderSummary(leaders)}</p>
+                              </div>
+                            )}
+                          </div>
+                          <figcaption className="cloth-label">{groundIndex + 1} · {motif}</figcaption>
+                        </figure>
+                      )
+                    }))}
+                  </div>
+                </div>
+              ))}
+
+              <h3 className="cloth-subheading">3:1 middle-third crop · every allowed rotation and min/max rhythm</h3>
+              {HERO_SIZES.map(size => (
+                <div key={size.id}>
+                  <h4 className="cloth-type-family-name">{size.label}</h4>
+                  <div className="cloth-grid">
+                    {CLOTH_MOTIFS.flatMap((motif, motifIndex) => (
+                      CLOTH_ROTATIONS[motif].flatMap(rotation => ([3, 9] as const).map(rhythm => {
+                        const spec = getCoverClothSpec({ seed: 'hero-crop', motif: motifIndex, rotation, rhythm, variant: 'plate' })
+                        const nodes = getCoverClothNodeCount(spec.name, spec.rhythm, 'plate')
+                        return (
+                          <figure className="cloth-swatch" key={`${size.id}-${motif}-${rotation}-${rhythm}`}>
+                            <Frame width={size.width} height={size.height}>
+                              <CoverCloth seed="hero-crop" ground={motifIndex % CLOTH_GROUNDS.length} motif={motifIndex} rotation={rotation as ClothRotation} rhythm={rhythm} variant="plate" preview />
+                            </Frame>
+                            <figcaption className="cloth-label">{motif} · {rotation}° · r{spec.rhythm} · {nodes} elements</figcaption>
+                          </figure>
+                        )
+                      }))
                     ))}
                   </div>
                 </div>
               ))}
 
-              <h3 className="cloth-subheading">Production seeds (default hash)</h3>
+              <h3 className="cloth-subheading">Compact marks · every motif</h3>
+              <div className="cloth-grid">
+                {CLOTH_MOTIFS.map((motif, motifIndex) => (
+                  <figure className="cloth-swatch" key={`compact-${motif}`}>
+                    <Frame width={44} height={44}>
+                      <CoverCloth seed={`thumb-${motif}`} ground={motifIndex % CLOTH_GROUNDS.length} motif={motifIndex} variant="thumb" preview />
+                    </Frame>
+                    <Frame width={200} height={6}>
+                      <CoverCloth seed={`band-${motif}`} ground={motifIndex % CLOTH_GROUNDS.length} motif={motifIndex} variant="strip" preview />
+                    </Frame>
+                    <Frame width={6} height={96}>
+                      <CoverCloth seed={`spine-${motif}`} ground={motifIndex % CLOTH_GROUNDS.length} motif={motifIndex} variant="spine" preview />
+                    </Frame>
+                    <figcaption className="cloth-label">{motif}</figcaption>
+                  </figure>
+                ))}
+              </div>
+
+              <h3 className="cloth-subheading">Maximum element counts</h3>
+              <div className="cloth-node-list">
+                {CLOTH_MOTIFS.map((motif, motifIndex) => {
+                  const spec = getCoverClothSpec({ seed: 'node-limit', motif: motifIndex, rhythm: 9, variant: 'cover' })
+                  const count = getCoverClothNodeCount(spec.name, spec.rhythm, 'cover')
+                  return (
+                    <div className="cloth-node-item" key={`node-${motif}`}>
+                      <span className="cloth-label">{motif} · rhythm {spec.rhythm}</span>
+                      <span className={`cloth-node-count${count > 30 ? ' cloth-node-count--limit' : ''}`}>{count} total elements</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <h3 className="cloth-subheading">Real production hashes</h3>
               <div className="cloth-grid">
                 {seeds.map(seed => (
                   <figure className="cloth-swatch" key={seed}>
-                    <div className="cloth-frame" style={{ inlineSize: 112, blockSize: 63 }}>
-                      <CoverCloth seed={seed} />
-                    </div>
-                    <figcaption className="cloth-label">{seed.slice(0, 8)}</figcaption>
+                    <Frame width={144} height={192}>
+                      <CoverCloth seed={seed} variant="cover" preview />
+                    </Frame>
+                    <figcaption className="cloth-label">{seed.slice(0, 12)}</figcaption>
                   </figure>
                 ))}
               </div>

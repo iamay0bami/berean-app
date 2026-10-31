@@ -3,17 +3,16 @@ import { Fraunces, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
 import { readTheme } from '@/lib/theme'
 
-// All three subsets on both families. `ẹ` (U+1EB9) and `ọ` (U+1ECD), and the
-// combining tone marks, live in Google's *vietnamese* block — not latin-ext.
-// Requesting only latin + latin-ext leaves Yoruba text in a fallback face.
-//
-// `subsets` controls *preloading*, not what is fetched: next/font pulls the full
-// CSS2 response (every subset, each with its own unicode-range) and marks only
-// the named subsets' files for preload. Latin only, therefore — it is what the
-// critical path renders — while latin-ext and vietnamese stay in the CSS and
-// download only when a glyph needs them.
+// Fraunces is limited to fixed English copy, so only its Latin file belongs on
+// the production critical path. Every live/user-authored value uses Hanken;
+// preload Latin, Latin Extended and Vietnamese so ṣ, ẹ, ọ and combining tones
+// stay in that one interface family. Candidate serifs live only on /dev/cloth.
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' })
-const hanken = Hanken_Grotesk({ subsets: ['latin'], variable: '--font-interface', display: 'swap' })
+const hanken = Hanken_Grotesk({
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
+  variable: '--font-interface',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Berean — A little room to listen, learn, and live the Word',

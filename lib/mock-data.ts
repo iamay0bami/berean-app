@@ -462,6 +462,22 @@ export async function getProfile(): Promise<ProfileResult> {
   }
 }
 
+export async function getClothPreviewData(): Promise<{ seeds: string[]; classes: Pick<ActiveClass, 'id' | 'name'>[] }> {
+  const supabase = await createClient()
+  const [classes, lessons, sermons] = await Promise.all([
+    supabase.from('classes').select('id,name').eq('active', true).order('name').limit(12),
+    supabase.from('lessons').select('id').order('created_at', { ascending: false }).limit(12),
+    supabase.from('sermons').select('id').order('created_at', { ascending: false }).limit(12),
+  ])
+  if (classes.error) throw classes.error
+  if (lessons.error) throw lessons.error
+  if (sermons.error) throw sermons.error
+  return {
+    seeds: [...(classes.data ?? []), ...(lessons.data ?? []), ...(sermons.data ?? [])].map(row => row.id),
+    classes: (classes.data ?? []).map(row => ({ id: row.id, name: normalizeHumanText(row.name) })),
+  }
+}
+
 export async function getHomeData() {
   const [lesson, sermons, prayers] = await Promise.all([getLatestLesson(), getSermons(1), getPrayerPoints(1)])
   return { lesson, sermon: sermons[0], prayer: prayers[0] }

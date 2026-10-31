@@ -98,7 +98,7 @@ If you need a fourth brass, you have misdiagnosed the problem.
 `--bg` · `--bg-raised` · `--bg-sunken` · `--text` · `--text-muted` ·
 `--text-on-accent` · `--line` · `--line-strong` · `--accent` · `--accent-text` ·
 `--accent-soft` · `--rail` · `--community` · `--danger` · `--danger-soft` ·
-`--focus-ring` · `--glass-bg` · `--glass-border`
+`--focus-ring` · `--glass-solid` · `--glass-fill` · `--glass-border`
 
 Components reference **only these**. A component rule containing a raw hex is a
 bug, and `.review-question.answered`'s paper-on-brass was exactly that bug.
@@ -122,8 +122,9 @@ bug, and `.review-question.answered`'s paper-on-brass was exactly that bug.
   --rail: var(--brass-700);
   --community: var(--sage-600);
   --danger: var(--clay-600);
-  --glass-bg: rgb(245 244 242 / 0.72);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.04);
+  --glass-solid: rgba(248, 247, 244, 1);
+  --glass-fill: rgba(248, 247, 244, 0.92);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 /* One mechanism, two selectors. Both copies must be edited together. */
@@ -149,7 +150,8 @@ color-scheme: dark;
 --rail: var(--brass-400);
 --community: var(--sage-400);
 --danger: var(--clay-400);
---glass-bg: rgb(20 26 41 / 0.72);
+--glass-solid: rgba(24, 32, 54, 1);
+--glass-fill: rgba(24, 32, 54, 0.94);
 --shadow-1: none;   /* elevation is lightness on dark, not shadow */
 ```
 
@@ -216,91 +218,130 @@ stops meaning *your place* the moment it also means *submit*.
 
 ## 2. Type
 
-Two families, both variable, both through `next/font`.
+Two production families, both variable, both through `next/font`.
 
-| Role | Family | Why |
+| Role | Family | Content contract |
 | --- | --- | --- |
-| Display **and** reading | **Fraunces** | Already the app's voice; `opsz` is genuinely useful at reading sizes |
-| Interface | **Hanken Grotesk** | A humanist grotesque with visible warmth in `a`, `g`, `y` — literary rather than neutral-tech |
+| Fixed display | **Fraunces** | Fixed English strings authored in code only |
+| Interface and live content | **Hanken Grotesk** | Every user-authored or database-authored string |
+| Reading serif | Undecided | Source Serif 4 and Noto Serif are preview controls only |
 
-**Inter is the documented fallback**, not the default. It is proven here and
-Hanken Grotesk is not; if the Yoruba gate below fails, ship Inter and record it.
+Fraunces has no GPOS mark lookups and cannot reliably position Yoruba combining
+tone marks. Combining its split files would not repair that. Do not add a local or
+unsplit Fraunces asset, and do not use `:lang()` routing while persisted content has
+no language field.
 
-### 2.1 Subsets — Yoruba is the reason
+### 2.1 Subsets and the Yoruba gate
+
+Production loading is intentionally asymmetric:
 
 ```ts
-subsets: ['latin']
+Fraunces({ subsets: ['latin'] })
+Hanken_Grotesk({ subsets: ['latin', 'latin-ext', 'vietnamese'] })
 ```
 
-`AGENTS.md` says latin + latin-ext. That is **incomplete for Yoruba**: `ṣ` is
-U+1E63 (latin-ext ✓), but **`ẹ` U+1EB9 and `ọ` U+1ECD live in Google's
-*vietnamese* block** (U+1EA0–1EF9), as do the combining tone marks U+0300/U+0301.
-Requesting only two subsets leaves Yoruba text in a fallback face with the wrong
-weight and shape. Verify in a **production** build.
+Fraunces owns fixed English only. Hanken owns live content, so the production gate
+checks realistic Yoruba clusters across precomposed acute/grave forms and stacked
+marks rather than treating an invalid consonant-plus-tone sample as orthography.
 
-**`subsets` controls preloading, not what is fetched.** `next/font` fetches the
-full CSS2 response — every subset Google returns for the family, each with its
-own `unicode-range` — and marks only the named subsets' files for preload. So
-`subsets: ['latin']` on both families preloads two woff2 files, while the
-latin-ext and vietnamese faces stay in the stylesheet and download only when a
-glyph needs them. That is why Yoruba still renders in Fraunces and Hanken
-Grotesk, and why no second font instance is needed.
+The admin-only `/dev/cloth` gate compares production Fraunces and Hanken with
+route-local `Source_Serif_4` and `Noto_Serif` controls. Both candidates request
+`latin`, `latin-ext` and `vietnamese` through the installed `next/font/google` API;
+neither ships on production screens in this batch.
 
-**The gate.** Render this at 14px, 16px and 19px, in both families, in both
-themes, and inspect — a fallback face shows as a weight and shape mismatch:
+Render the exact NFC string and inspect each difficult cluster at 14px, 16px and
+19px in both themes:
 
 ```
-Ẹ ọ ṣ ẹ́ ọ̀ ṣ́ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
+Ń ń Ḿ ḿ Ǹ ǹ Ẹ́ Ọ̀ ẹ̄ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
 ```
 
-The temporary `/dev/cloth` gate implements this as `.cloth-type-grid`, with
-`.cloth-type-family` panels and `.cloth-type-row` samples. The family and size
-modifiers select the two font tokens and the existing 14px, 16px and 19px type
-tokens; all of these classes are deleted with the preview route.
+Also render individually inspectable `Ń`, `ń`, `Ḿ`, `ḿ`, `Ǹ`, `ǹ`, `Ẹ́`, `Ọ̀`
+and `ẹ̄`. Keep one separately labelled `ṣ́` row only as a known split-subset
+fallback; it is not valid Yoruba orthography because tone marks sit on vowels and
+syllabic nasals. A labelled NFD `n` + U+0301 diagnostic sits beside NFC `ń` to
+make the normalization requirement observable. Use Chrome Rendered Fonts and
+cold-cache network requests from a production build; record physical resources,
+mark placement, spacing, line metrics and exact transfer weights. NFC consistency
+is a data-integrity rule, not a shaping repair.
+
+The gate also renders real profile/leader names in the Home greeting composition:
+fixed Fraunces greeting copy plus a Hanken name. In the measured real-name set,
+14px and 16px remained one line; the longest 19px sample wrapped to two lines but
+did not overflow.
+
+**Production result, 2026-10-31.** Chrome Rendered Fonts kept `Ń`, `ń`, `Ẹ́`,
+`Ọ̀` and `ẹ̄` entirely in Hanken Grotesk, but `Ḿ`, `ḿ`, `Ǹ` and `ǹ` fell back
+to Arial. The realistic NFC gate therefore still uses two physical families and
+the Hanken-only live-text contract remains blocked. The NFD `n` + U+0301
+diagnostic also fell back to Arial while NFC `ń` stayed in Hanken, confirming
+why write-boundary NFC normalization remains mandatory. The separately labelled,
+invalid-orthography `ṣ́` diagnostic continues to fall back to Arial.
+
+Source Serif 4 and Noto Serif kept all nine realistic NFC clusters in their named
+families; Fraunces fell back to Times New Roman for the same four precomposed
+`m`/`n` forms that Hanken missed. All three serif controls fell back to Times New
+Roman for the NFD diagnostic and invalid `ṣ́` row. The reading serifs remain
+preview controls pending their separate decision; this result does not approve one
+for production. Do not begin Batch 3 screens while the Hanken gate is unresolved.
 
 ### 2.2 Roles and scale (rem, root 16px)
 
 | Token | Size / line-height | Family | Weight | Used for |
 | --- | --- | --- | --- | --- |
-| `--text-display` | 2.75rem / 1.02 | Fraunces | 500 | Home greeting only |
-| `--text-title` | 1.875rem / 1.08 | Fraunces | 500 | Page titles |
-| `--text-heading` | 1.375rem / 1.2 | Fraunces | 500 | Section headings, card titles |
-| `--text-reading` | 1.1875rem / 1.62 | Fraunces | 400 | Lesson and sermon body |
-| `--text-body` | 1rem / 1.55 | Hanken | 400 | UI body, list excerpts |
+| `--text-display` | 2.75rem / 1.02 | role-dependent | 500 | Fixed greeting copy; live name is Hanken |
+| `--text-title` | 1.875rem / 1.08 | Fraunces | 500 | Fixed page titles |
+| `--text-heading` | 1.375rem / 1.2 | role-dependent | 500/600 | Fixed section heading or live Hanken title |
+| `--text-reading` | 1.1875rem / 1.62 | undecided serif | 400 | Existing reading surfaces pending the serif decision |
+| `--text-body` | 1rem / 1.55 | Hanken | 400 | UI body and all live list/card text |
 | `--text-ui` | 0.875rem / 1.45 | Hanken | 450 | Buttons, fields, list metadata |
-| `--text-label` | 0.75rem / 1.3 | Hanken | 600 | Labels, badges — sentence case |
-| `--text-micro` | 0.6875rem / 1.2 | Hanken | 600 | Rail readout, nav labels |
+| `--text-label` | 0.75rem / 1.3 | Hanken | 600 | Labels and badges |
+| `--text-micro` | 0.6875rem / 1.2 | Hanken | 600 | Rail readout and nav labels |
 
-Reading measure `--measure: 34rem` (≈544px at 19px Fraunces ≈ 62–68 characters).
-Headings `text-wrap: balance`; paragraphs `text-wrap: pretty`.
+Reading measure remains `--measure: 34rem`. Fixed headings use `text-wrap: balance`;
+paragraphs use `text-wrap: pretty`. A generic heading selector must not force a
+live value into Fraunces; components use explicit fixed-copy and live-copy classes.
 
-### 2.3 Two removals that were the biggest tells
+### 2.3 Deferred reading-serif inventory
 
-1. **JetBrains Mono is gone.** It existed almost only to set tracked-out uppercase
-   eyebrows — a named AI-default cluster tell. `--font-mono` and its
-   `@theme inline` mapping go with it. The invite code keeps `tabular-nums` and
-   `0.12em` tracking in Hanken.
-2. **Decorative eyebrows are gone.** `<Meta>` above `YOUR FORMATION`,
-   `GATHERED WORDS`, `AROUND THE TABLE`, `ADMINISTRATION` is decoration. What
-   survives is metadata annotating a specific object: a lesson's week, a sermon's
-   date and speaker, a relative timestamp.
+Batch 3 does not decide the serif for existing lesson/sermon prose. A separate
+decision must cover:
 
-The gold italic `em` survives in exactly **two** places: your name in the
-greeting, and a sermon's second title line. Not in auth headings — "accenting one
-word in a headline" is the first tell.
+- lesson reader title, quote, paragraphs, margin note and member-thought body;
+- sermon-list titles/summaries and prayer bodies;
+- sermon reader title, deck, paragraphs, margin note and closing;
+- discussion prompt and member posts;
+- profile name/tagline;
+- admin/author headings containing class, lesson or member values.
 
-### 2.4 Payload
+### 2.4 NFC and identifiers
 
-| Asset | Estimate |
-| --- | --- |
-| Fraunces variable × 3 subsets | ~110–150 KB woff2 |
-| Hanken Grotesk variable × 3 subsets | ~35–55 KB woff2 |
-| JetBrains Mono, removed | −30–40 KB |
+Human-readable content is trimmed and NFC-normalized at write boundaries, with a
+defensive read normalization for legacy values. The normalization change lands in
+its own commit. It never rewrites IDs, existing slugs, URLs, email addresses,
+passwords, auth/session values, invite codes or usernames.
 
-`unicode-range` means an English-only reader fetches latin alone and pays about a
-third; a Yoruba reader pays the extra ~40–60 KB, which is the correct trade.
-`font-display: swap` on both. **Measure the real woff2 transfer** and record the
-number here.
+Usernames keep their separate canonical rule: trim, lowercase, null when empty,
+validate `^[a-z][a-z0-9_]{2,19}$`, and enforce uniqueness on `lower(username)`.
+
+### 2.5 Payload
+
+Fraunces preloads Latin only. Hanken preloads Latin, Latin Extended and Vietnamese.
+Source Serif 4 and Noto Serif exist only on the admin preview route.
+
+The production `/dev/cloth` manifest emitted these requested-subset WOFF2 files:
+
+| Family | Files | Bytes | KiB |
+| --- | ---: | ---: | ---: |
+| Fraunces Latin | 1 | 36,560 | 35.7 |
+| Hanken Latin + Latin Extended + Vietnamese | 3 | 63,600 | 62.1 |
+| Source Serif 4 preview controls | 3 | 106,392 | 103.9 |
+| Noto Serif preview controls | 3 | 238,048 | 232.5 |
+| Admin preview total | 10 | 444,600 | 434.2 |
+
+These are emitted file sizes from the production manifest, not a claim about a
+browser session. Rendered Fonts, cache behavior and transfer headers remain a
+manual authenticated-browser check.
 
 ---
 
@@ -333,25 +374,27 @@ already has. Tokenised, used only on cloth plates.
 
 ### 3.4 Glass
 
+Real `backdrop-filter` is permitted on exactly `.bottom-nav` and
+`.reading-header`. Class-detail and authoring headers are solid. The moving nav
+capsule and cloth captions are faux material with no filter.
+
 ```css
---glass-bg: rgb(20 26 41 / 0.72);   /* dark  */
---glass-bg: rgb(245 244 242 / 0.72); /* light */
+/* light */
+--glass-solid: rgba(248, 247, 244, 1);
+--glass-fill: rgba(248, 247, 244, 0.92);
+/* dark */
+--glass-solid: rgba(24, 32, 54, 1);
+--glass-fill: rgba(24, 32, 54, 0.94);
 --glass-blur: 12px;
 --glass-border: 1px solid var(--line);
 ```
 
-**Permitted on exactly two surfaces: `.bottom-nav` and `.reading-header`.**
-Nowhere else. Never over reading text, and never behind a focused input — which
-is why `FormHeader` is the one sticky header without glass.
+Declare the solid color first. Apply the fill and capped blur only inside a
+standard/WebKit support block. Under `prefers-reduced-transparency`, restore the
+solid color and set both filter spellings to `none`. Never place glass behind
+reading text or a focused field, nest filtered surfaces, or animate blur.
 
-```css
-@supports not (backdrop-filter: blur(1px)) {
-  .bottom-nav, .reading-header { background: var(--bg); border-color: var(--line); }
-}
-@media (prefers-reduced-transparency: reduce) {
-  .bottom-nav, .reading-header { background: var(--bg); backdrop-filter: none; }
-}
-```
+The token name is `--glass-fill` everywhere; `--glass-bg` is retired.
 
 ### 3.5 Fallbacks for modern syntax — and the trap
 
@@ -366,17 +409,17 @@ silently**:
 | `color-mix()` in a real property | `background: var(--glass-opaque);` then the mix | Same rule |
 
 **The trap.** The two-declaration pattern does **not** work for a custom
-property. `--glass-bg: rgb(…); --glass-bg: color-mix(…);` stores the `color-mix`
+property. `--glass-fill: rgb(…); --glass-fill: color-mix(…);` stores the `color-mix`
 token unconditionally — custom properties are not validated at declaration time —
 and an unsupported value then fails at **use** time, where the property becomes
 `unset` rather than falling back to the earlier declaration.
 
-> **Rule: token values use hex and `rgb()` only. No `color-mix()`, no `oklch()`
-> inside any `--*` property.** Where a mix is genuinely wanted, gate the custom
+> **Rule: token values use hex, `rgb()` or comma-form `rgba()`. No `color-mix()`,
+> no `oklch()` inside any `--*` property.** Where a mix is genuinely wanted, gate the custom
 > property's *declaration* with
 > `@supports (background: color-mix(in srgb, red, blue)) { :root { … } }`.
 
-Glass uses concrete `rgb()` values, so it needs no `@supports` for its colour at
+Glass uses concrete comma-form `rgba()` values, so it needs no `@supports` for its colour at
 all. Also in play, each needing a fallback or graceful degradation: `text-wrap:
 pretty`, `:has()`, `text-box: trim-both`, individual `translate`/`scale`
 properties.
@@ -394,24 +437,22 @@ Every transition **names its properties**. `transition: all` appears nowhere.
 
 | Moment | Motion | Why it earns it |
 | --- | --- | --- |
-| Home greeting, on load | The name settles: 300ms opacity + 12px `translateY`; the rest follows 100ms later, once | The app's one staged entrance |
+| Nav capsule, on tab change | `280ms` transform-only translation | Answers a tap and shows the active destination |
+| Shelf | User-driven native scroll/snap | Answers direct manipulation; no timer or carousel controls |
+| Button/card press | Short scale/color response | Answers the press |
 | Lesson reading rail | Length tracks real scroll position | Answers the reader's own movement |
-| Nav indicator, on tab change | 240ms `translateX` of one bar | Answers a tap and shows where you moved to |
-| Theme switch | All transitions suppressed for one frame | Otherwise every colour transition fires at once and smears |
-| New margin note (once the composer exists) | 8px rise over 200ms | Answers a submit |
+| Theme switch | All transitions suppressed for one frame | Prevents a full-page colour smear |
 
-**No blurred text anywhere**, including the greeting. A `filter: blur()` in a
-transition is re-rasterised every frame on the compositor's least reliable path,
-and the greeting is the first thing painted on the slowest connection this
-audience has. Blur belongs on surfaces, never on type.
+No greeting entrance, staggered cards, looping loader, decorative motion or blur
+animation is added. Blur belongs on surfaces and is never animated.
 
-### 4.2 What deliberately does not animate
+### 4.2 Reduced motion
 
-**The nav icon swap.** Tab switches are a high-frequency interaction and get no
-animation; icons swap instantly and the moving bar carries the transition.
-
-Reduced motion turns the remaining three into an opacity cross-fade or nothing,
-and each leaves a static cue — a colour, a length, a position.
+Reduced motion makes the capsule position change immediately, removes press
+scaling, and changes the shelf to ordinary horizontal overflow without snap. The
+reading rail remains direct scroll feedback and the theme switch still suppresses
+transitions for one frame. Every motion leaves a static position, colour or length
+cue.
 
 ### 4.3 The reading rail — ref + rAF, `transform` not `height`
 
@@ -667,72 +708,91 @@ seed ─┬─ ground     : one of 6, from the cloth arc only (§7.2)
       └─ rotation   : 0° / 90° / 180°, so two same-motif plates never mirror exactly
 ```
 
-One seed, four variants, so a class's plate and its small marks agree:
+One seed, four production variants, so a class's cover and its small marks agree:
 
 | Variant | ViewBox | Used for |
 | --- | --- | --- |
-| `plate` (default) | `0 0 100 100` | 16:9 cards, 4:5 class header, sermon letterbox, bookplate ring |
-| `strip` | `0 0 100 8`, `preserveAspectRatio="none"` | the 6px lesson band and the 3px library-row edge |
-| `spine` | `0 0 8 100`, strip art rotated 90° | a 6px vertical spine |
-| `thumb` | `0 0 100 100` | the 44px row thumb — rhythm capped at 4, strokes at 5 |
+| `cover` | `0 0 100 100`, `xMidYMid slice` | 3:4 class shelf covers: 126×168 through 144×192, then 168×224 |
+| `plate` | `0 0 100 100`, `xMidYMid slice` | 3:1 class-detail hero and other square-source crops |
+| `strip` | `0 0 100 8`, `preserveAspectRatio="none"` | 6px lesson band |
+| `spine` | `0 0 8 100` | 6px vertical spine |
+| `thumb` | `0 0 100 100` | 44px row thumb, rhythm capped at four |
 
-Strips and spines carry **their own art**, drawn as filled shapes in a 100 × 8
-box: a square plate squeezed into 3px is noise, and a hairline stroke in an
-8-unit-tall box vanishes at that size.
+The 3px edge is retired. Strips and spines carry their own filled geometry; a
+square plate squeezed into a hairline is noise.
 
-Constraints for low-end Android: **≤30 SVG nodes per plate**, no filters, no
-gradients-with-blur, no animation, integer coordinates. Deterministic, so a class
-keeps its cloth forever and people learn to recognise it.
+Constraints for low-end Android: **≤30 total SVG elements**, counting the SVG
+root, ground rectangle, group and generated marks; no filters, gradients-with-
+blur, animation or network request; integer emitted geometry. Motifs have explicit
+allowed rotations. Comb excludes its cross-like 90° crop, dot grid remains identifiable
+in the middle third, and cross-band excludes its crop-destroying 90° rotation. The
+cross-band side bars stay inside `x=18–30` and `x=70–82`; the production geometry
+audit keeps both bars visible in every retained 3:4 cover and 3:1 hero sample.
 
-### 7.2 Grounds are restricted to hues nothing else owns
+### 7.2 Canonical grounds and motif inks
 
-Brass means *your place*, sage means *the room*, clay means *destructive*. If any
-of them also appeared as a cloth colour, the meanings would dissolve.
+Brass means *your place*, sage means *the room*, and clay means *destructive*.
+No cloth ground or motif may use those semantic hues. New cloth tokens use
+comma-form `rgba(r, g, b, a)`.
 
-- Grounds live **only on the indigo → blue-violet → violet → plum → teal arc**,
-  spanning roughly 16–42% lightness so no two plates read alike at 3px:
-  `#1B2438` (deep indigo), `#283A63` (indigo), `#3A3A78` (blue-violet),
-  `#5B4691` (violet, the lightest), `#6B3C5E` (plum), `#173F45` (deep teal).
-  The old undyed stone ground is gone: at 3px it read as a second neutral rather
-  than as a cloth, and deep teal holds its distance from sage (≈62° in hue).
-- **No cloth plate may contain brass, sage or clay at all**, in ground or motif.
-  The motif ink is a lighter step of its own ground, paired in the generator's map
-  so no CSS colour mixing is involved.
-- The rule generalises: a future cloth colour must sit **at least 40° away** from
-  brass (~40°), sage (~130°) and destructive clay (~20°) in hue.
+| Ground | Ground | Motif ink | Ground vs dark page / raised | Ink vs ground |
+| --- | ---: | ---: | ---: | ---: |
+| 1 slate blue | `#304B64` | `#607A92` | `1.915 / 1.701` | `2.028` |
+| 2 indigo | `#304879` | `#637CAB` | `1.925 / 1.710` | `2.148` |
+| 3 blue-violet | `#3C3C7B` | `#66639F` | `1.756 / 1.560` | `1.812` |
+| 4 violet | `#5B4691` | `#8A74BE` | `2.257 / 2.005` | `1.950` |
+| 5 plum | `#6B3C5E` | `#96617F` | `2.012 / 1.787` | `1.773` |
+| 6 teal | `#225E5E` | `#588B8F` | `2.340 / 2.079` | `1.945` |
+
+Ground 6 has OKLCH hue 195.18°: 42.16° from dark sage, 47.61° from
+light sage, at least 114.71° from brass and 164.12° from clay. Future cloth hues
+remain at least 40° from all semantic primitives. Ratios use WCAG sRGB relative
+luminance; inter-ground checks use CIE76 and hue checks use OKLCH.
 
 ### 7.3 Where each surface gets cover art
 
 | Surface | Treatment | Reasoning |
 | --- | --- | --- |
-| Class | Full plate, 16:9 on cards, 4:5 on the class header | A class is a shelf; it deserves a spine |
-| Lesson | **A 6px cloth band, plus the rail** — not a big image | A lesson is a reading surface. A hero image above body text is a blog tell, and on a 360px phone it pushes the first line of the Word below the fold |
+| Class | 3:4 cover on shelves; cloth-only 3:1 detail hero | The cover is identity; live name/leaders sit on Hanken surfaces |
+| Lesson | **A 6px cloth band, plus the rail** — not a big image | Reading content stays above decoration |
 | Sermon | 16:9 letterbox plate | A sermon is a dated object — a bulletin |
 | Profile | The avatar becomes a **bookplate**: initials stamped in a cloth ring | A library card rather than a social avatar |
-| Library rows | A 3px cloth edge, not a plate | 20 inline SVGs in a list would bloat the DOM for no gain |
+| Compact class row | 44px cloth thumb | The smallest retained identifying plate |
 
 **Real photos later:** nothing structural. Only a church's own material — a
 building, a logo, series art — on a nullable `cover_url`, with cloth as the
 fallback so nothing renders empty. `next.config.mjs` sets
 `images.unoptimized: true`, which must be revisited then.
 
-### 7.4 The preview sheet is a gate
+### 7.4 The preview sheet is a retained gate
 
-Before any screen renders a plate, `/dev/cloth` renders **every ground × every
-motif** at the real sizes (16:9 card, 4:5 header, 16:9 letterbox, 44px thumb,
-6px band, 3px row edge, 6px vertical spine, bookplate ring), seeded with **real
-ids from the database**, in **both themes** side by side. Bands and edges are
-shown for every motif, because the strip art is drawn separately from the plate
-art and cannot be judged from the plate.
+Before a production screen renders cloth, the admin-only `/dev/cloth` route shows
+both themes side by side with:
 
-`proxy.ts` gates a fixed list, so `/dev/cloth` is public unless added to that
-list. **Put it in the gate behind an admin check, and delete the route at the end
-of Batch 3.** It is scaffolding, not a surface.
+1. every ground × motif at 126×168, 144×192 and 168×224;
+2. captioned and uncaptioned covers;
+3. every motif in the real 280×93.33 and 320×106.67 3:1 crops, at every allowed
+   rotation and minimum/maximum rhythm;
+4. every motif as a 44×44 thumb, 200×6 band and 6×96 spine;
+5. default hashes from narrow real class, lesson and sermon ID readers;
+6. visible total-element counts for the heaviest samples;
+7. Hanken, Fraunces, Source Serif 4 and Noto Serif typography controls;
+8. real-name greeting samples combining fixed Fraunces copy with a Hanken name.
 
-Reviewing it decides three things that should not be guessed: whether six grounds
-are visually distinct at 3px; whether the deep plates are too heavy on light (if
-so, light gets a lighter plate set); and whether any motif reads as a logo or a
-flag.
+Caption plates are unblurred faux material. Both caption lines use primary text.
+The production browser rasterized all six grounds and six motif inks in both
+themes with Dark Reader disabled for the audit. All 24 cells pass: the minimum
+light ratio is 13.65:1 and the minimum dark ratio is 12.49:1 (dark over motif ink
+4). The 0.94 plate alpha therefore remains approved.
+
+The final DOM audit rendered 522 cloth SVGs: maximum declared and actual count 30,
+zero count mismatches, zero over-limit samples and zero decimal geometry values.
+All eight motifs remain identifiable across their allowed rotations and minimum/
+maximum rhythms. The audit raised the minimum-rhythm wave into the middle third
+and removed comb's cross-like 90° rotation before passing.
+
+`proxy.ts` and the page both enforce the admin gate. Keep the route until explicit
+approval; do not delete it automatically when production plates land.
 
 ---
 
@@ -767,7 +827,8 @@ Keep these; they are cheap and they were expensive to learn.
    `.lesson-index > span` (0-1-1) silently outranked `.meta` (0-1-0) and rendered
    the `Week 1` label as 27px gold serif. Style by class. This trap is one
    keystroke away on every new component.
-2. **Token values use hex and `rgb()` only** — no `color-mix()`, no `oklch()` in a
+2. **Token values use hex, `rgb()` or comma-form `rgba()`** — no `color-mix()`,
+   no `oklch()` in a
    `--*` property (§3.5).
 3. **Text on a brass fill is always ink** (§1.4).
 4. **A control's border reaches 3:1 against the surface it sits on**, and the
@@ -823,10 +884,39 @@ does.**
 10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections
     built then are the content that would move.
 
+### 10.1 Batch 3 screen contract — deferred after the cloth gate
+
+These screens are designed but are not authorized until the Stage B cloth/font
+report is reviewed:
+
+- Home and Classes share a full-bleed horizontal snap shelf with page-aligned
+  `scroll-padding-inline`, 12px gaps, 126×168 covers at 320px, 144×192 at 360px,
+  and 168×224 from 768px. The next-card sliver is 24px at 320 and 28px at 360.
+- Cover captions render live values in Hanken. Leader summaries are `Leader not
+  assigned`, `Led by A`, or `Led by A +N`, with the full sorted list exposed to
+  assistive technology and on class detail.
+- Other-class tiles preserve 110px text width at 320 and 130px at 360; class name,
+  leader summary and description clamp to two lines, with full content on detail.
+- The Classes lesson section is named **Lessons from your classes**.
+- `/class/[classId]` uses a 60px solid normal-flow sticky header above a cloth-only
+  3:1 hero. Full Hanken class name, semantic leader list and description sit below
+  the hero. A non-member with no class leaders is told `Ask your church admin`.
+- Personal class/lesson data is active explicit memberships plus the separately
+  modelled active led class. `getClassLeaders()` supplies every leader; do not use
+  `member_display()` for class leaders.
+- The Home Community tile uses the latest published discussion topic. The prayer
+  tile must not link until Sermons adds the currently missing `#prayer-points`
+  anchor.
+- Bottom navigation uses a faux-glass moving capsule. Real filters remain only on
+  the nav surface and reading header. Authoring lesson forms hide nav through one
+  shared route matcher.
+- Home, Classes and class detail get static shape-matched skeletons only; the
+  shared `components/branded-loading.tsx` and untouched routes do not change.
+
 **Scaffolding currently in the tree:** `components/cover-cloth.tsx` and the
-admin-only `/dev/cloth` preview route exist as the cloth gate. No production
-screen renders a plate yet, and both the route and its scaffolding CSS are
-deleted when the plates land.
+admin-only `/dev/cloth` preview route exist as the retained cloth gate. No production
+screen renders a plate yet; removing the preview requires explicit approval after
+the production screens and browser matrix pass.
 
 ---
 
