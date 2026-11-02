@@ -26,6 +26,7 @@ export async function generateViewport(): Promise<Viewport> {
   return {
     // Both schemes are supported in CSS; the meta only tells the UA so.
     colorScheme: 'light dark',
+    viewportFit: 'cover',
     // An explicit choice has one known ground; `system` lets the browser pick.
     themeColor: theme === 'dark' ? '#141A29'
       : theme === 'light' ? '#F5F4F2'

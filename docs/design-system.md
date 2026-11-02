@@ -417,16 +417,31 @@ capsule and cloth captions are faux material with no filter.
 /* light */
 --glass-solid: rgba(248, 247, 244, 1);
 --glass-fill: rgba(248, 247, 244, 0.92);
+--glass-sheen-top: rgba(255, 255, 255, 0.28);
+--glass-sheen-bottom: rgba(255, 255, 255, 0);
+--glass-border-color: rgba(22, 32, 58, 0.14);
+--glass-inset-highlight: rgba(255, 255, 255, 0.72);
+--glass-inset-shade: rgba(22, 32, 58, 0.08);
+--glass-shadow: 0 8px 24px rgba(22, 32, 58, 0.10), 0 2px 6px rgba(22, 32, 58, 0.06);
 /* dark */
 --glass-solid: rgba(24, 32, 54, 1);
 --glass-fill: rgba(24, 32, 54, 0.94);
+--glass-sheen-top: rgba(240, 233, 220, 0.10);
+--glass-sheen-bottom: rgba(240, 233, 220, 0);
+--glass-border-color: rgba(255, 255, 255, 0.16);
+--glass-inset-highlight: rgba(240, 233, 220, 0.14);
+--glass-inset-shade: rgba(0, 0, 0, 0.28);
+--glass-shadow: none;
+/* shared */
 --glass-blur: 12px;
---glass-border: 1px solid var(--line);
+--glass-saturate: 1.6;
+--glass-border: 1px solid var(--glass-border-color);
 ```
 
 Declare the solid color first. Apply the fill and capped blur only inside a
-standard/WebKit support block. Under `prefers-reduced-transparency`, restore the
-solid color and set both filter spellings to `none`. Never place glass behind
+standard/WebKit support block nested under `prefers-reduced-transparency:
+no-preference`. Under `reduce`, restore the solid color; the gated filter rule is
+absent, so both filter spellings compute to `none`. Never place glass behind
 reading text or a focused field, nest filtered surfaces, or animate blur.
 
 The token name is `--glass-fill` everywhere; `--glass-bg` is retired.
@@ -555,7 +570,7 @@ Mobile first. Verify at **360px, 768px and desktop**.
 | --- | --- |
 | `.page-wrap` | `max-width: 720px`, centred, `padding-inline: var(--space-5)` (20px at 360px) |
 | Content bottom padding | `calc(var(--nav-h) + var(--space-5))` — from a token, not the current hard-coded `88px` |
-| `--nav-h` | `calc(56px + env(safe-area-inset-bottom))` |
+| `--nav-h` | `calc(64px + env(safe-area-inset-bottom))` |
 | `scroll-padding-block-start` | the sticky header's height, so an anchored target or a focused field never lands under it |
 | Touch targets | ≥44px, always |
 | Horizontal scroll | Never |
@@ -564,28 +579,25 @@ Mobile first. Verify at **360px, 768px and desktop**.
 
 ### 5.2 Bottom navigation
 
-```
-┌──────────────────────────────────────────────┐
-│   ▁▁▁                                        │  ← brass slide bar, 3px,
-│  ⌂    ▭    ▤    ◌    ☺                       │    translateX, 240ms
-│ Home Classes Sermons Discuss Profile          │
-└──────────────────────────────────────────────┘
-```
-
 Five destinations, labels unchanged — the routes exist and the words are the
-users' words.
+users' words. Mobile is edge-to-edge at 64px plus the bottom safe area, with only
+a block-start edge border and no outer shadow. From 768px the nav becomes a
+centred floating pill, no wider than 560px and 16px above the safe area, with a
+full border and the theme's glass shadow.
 
 - **One size, one stroke.** 22px at `strokeWidth={1.7}` inactive → `{2}` plus
   `fill="currentColor"` active. Mixing `size={19}` with `2.3`/`1.7` reads as two
   icon sets.
-- **Three redundant state signals**: colour, weight/fill, and the bar. Colour is
-  never the only carrier.
+- **Three redundant state signals**: primary text, heavier/filled icon, and the
+  capsule. Colour is never the only carrier.
 - **Labels always visible.** Icon-only nav fails the everyday member.
-- The indicator is **one absolutely-positioned element driven by `transform`**,
-  not a `::before` on the current item. The `::before` renders correctly today,
-  but it cannot animate between items, which is what the brief asks for.
+- `.nav-capsule` is one aria-hidden, pointer-transparent faux-glass element
+  behind the active link. `--active-index` moves it between equal columns using
+  transform only; the capsule never receives `backdrop-filter`.
 - `-webkit-tap-highlight-color: transparent`, since each item draws its own
   pressed state. Hover styling only inside `@media (hover: hover)`.
+- Reduced motion makes the capsule jump immediately and removes link/capsule
+  press scaling. Focus rings remain above the capsule.
 
 ### 5.3 Headers — four variants
 
