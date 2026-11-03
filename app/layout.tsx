@@ -1,13 +1,18 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
 import { readTheme } from '@/lib/theme'
 
-// Fraunces is limited to fixed English copy, so only its Latin file belongs on
-// the production critical path. Every live/user-authored value uses the combined
-// local Hanken file; split-font controls live only on /dev/cloth.
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' })
+const bereanSerif = localFont({
+  src: './fonts/berean-serif/BereanSerif-SemiBold.woff2',
+  variable: '--font-serif',
+  weight: '600',
+  style: 'normal',
+  display: 'swap',
+  preload: true,
+  fallback: ['Times New Roman'],
+  adjustFontFallback: 'Times New Roman',
+})
 const hanken = localFont({
   src: './fonts/hanken/HankenGrotesk-Yoruba.woff2',
   variable: '--font-interface',
@@ -42,7 +47,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${hanken.variable}`}
+      className={`${bereanSerif.variable} ${hanken.variable}`}
       data-theme={theme === 'system' ? undefined : theme}
     >
       <body className="antialiased">{children}</body>

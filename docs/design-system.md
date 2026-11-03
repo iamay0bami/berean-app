@@ -218,25 +218,29 @@ stops meaning *your place* the moment it also means *submit*.
 
 ## 2. Type
 
-Two production families, both variable, both through `next/font`.
+Two production families, both self-hosted through `next/font/local`: one static serif and one variable sans.
 
 | Role | Family | Content contract |
 | --- | --- | --- |
-| Fixed display | **Fraunces** | Fixed English strings authored in code only |
-| Interface and live content | **Hanken Grotesk** | Every user-authored or database-authored string |
-| Reading serif | Undecided | Source Serif 4 and Noto Serif are preview controls only |
+| Display | **Berean Serif** | Headings, including live names and titles; complete Home greeting; folio numerals; scripture quotations |
+| Interface and body | **Hanken Grotesk** | Controls, metadata, descriptions, prayers, thoughts, summaries and long-form reading prose |
 
-Fraunces has no GPOS mark lookups and cannot reliably position Yoruba combining
-tone marks. Combining its split files would not repair that. Do not add a local or
-unsplit Fraunces asset, and do not use `:lang()` routing while persisted content has
-no language field.
+Display role overrides content origin. Berean Serif is a static 600 normal, optical-size-20 instance; never request or synthesize another serif weight or style. Hanken remains the 100–900 variable interface face. Do not use `:lang()` for font routing. Class-detail content typography remains Hanken as a temporary exception until that screen's next redesign.
 
 ### 2.1 Subsets and the Yoruba gate
 
 Production loading is intentionally asymmetric:
 
 ```ts
-Fraunces({ subsets: ['latin'] })
+localFont({
+  src: './fonts/berean-serif/BereanSerif-SemiBold.woff2',
+  variable: '--font-serif',
+  weight: '600',
+  style: 'normal',
+  display: 'swap',
+  preload: true,
+  adjustFontFallback: 'Times New Roman',
+})
 localFont({
   src: './fonts/hanken/HankenGrotesk-Yoruba.woff2',
   variable: '--font-interface',
@@ -246,16 +250,11 @@ localFont({
 })
 ```
 
-Fraunces owns fixed English only. The single combined local Hanken variable font
-owns live content, so base letters and combining marks cannot be separated by
-Google unicode-range files. The production gate checks realistic Yoruba clusters
+Berean Serif owns display headings, the complete greeting, folios and scripture quotations. The single combined local Hanken variable font owns body and interface text, so base letters and combining marks cannot be separated by Google unicode-range files. The production gate checks realistic Yoruba clusters
 across precomposed acute/grave forms, decomposed mark sequences and plain letters
 rather than treating an invalid consonant-plus-tone sample as orthography.
 
-The admin-only `/dev/cloth` gate compares production Fraunces and local Hanken
-with a route-local Google-split `Hanken_Grotesk` control and route-local
-`Source_Serif_4` and `Noto_Serif` controls. All three Google controls request
-`latin`, `latin-ext` and `vietnamese`; none ships on production screens.
+The admin-only `/dev/cloth` gate compares production Berean Serif and local Hanken with route-local Google-split Hanken and Source Serif 4 controls. Noto Serif and Fraunces are removed. No control font ships on production screens.
 
 Render the exact NFC string and inspect each difficult cluster at 14px, 16px and
 19px in both themes:
@@ -275,15 +274,12 @@ production build; record physical resources, mark placement, spacing, line metri
 and exact transfer weights. NFC consistency is a data-integrity rule, not a shaping
 repair.
 
-The gate also renders real profile/leader names in the Home greeting composition:
-fixed Fraunces greeting copy plus a Hanken name. In the measured real-name set,
-14px and 16px remained one line; the longest 19px sample wrapped to two lines but
-did not overflow.
+The gate also renders real profile/leader names in the complete Berean Serif Home greeting composition.
 
 **Production result, 2026-10-31 — combined local Hanken.** Chrome Rendered
 Fonts kept all 18 realistic clusters entirely in Hanken Grotesk: `m̀`, `M̀`, `ḿ`,
 `Ḿ`, `ǹ`, `Ǹ`, `Ń`, `ń`, `Ẹ́`, `Ọ̀`, `ẹ̄`, `ṣ`, `Ṣ`, `ọ`, `ẹ`, `ị`, `ụ`
-and `ṅ`. The Hanken-only live-text contract therefore **passes**. The NFD `n` +
+and `ṅ`. The Hanken interface/body contract therefore **passes**. The NFD `n` +
 U+0301 diagnostic and the separately labelled, invalid-orthography `ṣ́` row also
 stay in the combined Hanken file.
 
@@ -295,38 +291,29 @@ the NFD diagnostic and invalid `ṣ́`; it keeps the other ten realistic cluster
 Hanken. This split-control failure and local-font pass isolate unicode-range
 splitting as the cause rather than Hanken's available Yoruba glyphs.
 
-Source Serif 4 and Noto Serif remain preview controls pending their separate
-reading-serif decision; passing the interface-font gate does not approve either
-serif or authorize Batch 3 screens.
+Source Serif 4 remains only as the route-local upstream split control for Berean Serif. It is not a production candidate.
 
 ### 2.2 Roles and scale (rem, root 16px)
 
 | Token | Size / line-height | Family | Weight | Used for |
 | --- | --- | --- | --- | --- |
-| `--text-display` | 2.75rem / 1.02 | role-dependent | 500 | Fixed greeting copy; live name is Hanken |
-| `--text-title` | 1.875rem / 1.08 | Fraunces | 500 | Fixed page titles |
-| `--text-heading` | 1.375rem / 1.2 | role-dependent | 500/600 | Fixed section heading or live Hanken title |
-| `--text-reading` | 1.1875rem / 1.62 | undecided serif | 400 | Existing reading surfaces pending the serif decision |
+| `--text-display` | 2.75rem / 1.02 | Berean Serif | 600 | Complete Home greeting |
+| `--text-title` | 1.875rem / 1.08 | Berean Serif | 600 | Class, lesson and sermon content titles |
+| `--text-heading` | 1.375rem / 1.2 | Berean Serif | 600 | Section and compact display headings |
+| `--text-reading` | 1.1875rem / 1.62 | Hanken | 400 | Long-form reading prose |
 | `--text-body` | 1rem / 1.55 | Hanken | 400 | UI body and all live list/card text |
 | `--text-ui` | 0.875rem / 1.45 | Hanken | 450 | Buttons, fields, list metadata |
 | `--text-label` | 0.75rem / 1.3 | Hanken | 600 | Labels and badges |
 | `--text-micro` | 0.6875rem / 1.2 | Hanken | 600 | Rail readout and nav labels |
 
 Reading measure remains `--measure: 34rem`. Fixed headings use `text-wrap: balance`;
-paragraphs use `text-wrap: pretty`. A generic heading selector must not force a
-live value into Fraunces; components use explicit fixed-copy and live-copy classes.
+paragraphs use `text-wrap: pretty`. Heading and quote roles may render live values in Berean Serif; summaries, descriptions and prose remain Hanken. Class-detail content typography temporarily remains Hanken until that screen's next redesign.
 
-### 2.3 Deferred reading-serif inventory
+### 2.3 Resolved role map
 
-Batch 3 does not decide the serif for existing lesson/sermon prose. A separate
-decision must cover:
-
-- lesson reader title, quote, paragraphs, margin note and member-thought body;
-- sermon-list titles/summaries and prayer bodies;
-- sermon reader title, deck, paragraphs, margin note and closing;
-- discussion prompt and member posts;
-- profile name/tagline;
-- admin/author headings containing class, lesson or member values.
+- Berean Serif 600 normal: display headings and names, scripture quotations, folio numerals and brand marks.
+- Hanken: controls, metadata, descriptions, summaries, prayers, thoughts, posts, margin notes, loading copy and long-form lesson/sermon prose.
+- Class-detail content typography remains Hanken until its next redesign; only its compact fixed header uses Berean.
 
 ### 2.4 NFC and identifiers
 
@@ -340,9 +327,9 @@ validate `^[a-z][a-z0-9_]{2,19}$`, and enforce uniqueness on `lower(username)`.
 
 ### 2.5 Payload
 
-Fraunces preloads its Latin file. Production Hanken is one self-hosted variable
-WOFF2; the Google-split Hanken, Source Serif 4 and Noto Serif files exist only on
-the admin preview route.
+Berean Serif and Hanken each preload one local WOFF2. Google-split Hanken and Source Serif 4 exist only on the admin preview route; Noto Serif and Fraunces are retired.
+
+Berean Serif is a Modified Version of Source Serif 4 under SIL OFL 1.1, renamed because “Source” is a Reserved Font Name. The static file is `wght` 600, `opsz` 20, 41,776 bytes, SHA-256 `7dfcc4fe15ec96ace5baed7003cfc09089d90ba5f567b7d7c6c61c3c0082122c`. Never call the production family “Source Serif.”
 
 The local asset is derived from the official Google Fonts OFL source at commit
 `6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec`:
@@ -364,19 +351,13 @@ and Brotli are not application dependencies.
 
 | Route / family | Scope | Files requested | Encoded bytes | KiB |
 | --- | --- | ---: | ---: | ---: |
-| Fraunces Latin | production | 1 | 36,560 | 35.7 |
+| Berean Serif static 600 | production | 1 | 41,776 | 40.8 |
 | Hanken combined variable | production | 1 | 48,268 | 47.1 |
-| `/home` production total | production | 2 | 84,828 | 82.8 |
-| Google control fonts beyond production | `/dev/cloth` only | 13 | 514,508 | 502.4 |
-| `/dev/cloth` total | admin preview | 15 | 599,336 | 585.3 |
+| `/home` production total | production | 2 | 90,044 | 87.9 |
+| Google control fonts beyond production | `/dev/cloth` only | measure in final production audit | measure | measure |
+| `/dev/cloth` total | admin preview | measure in final production audit | measure | measure |
 
-A cache-disabled production browser run returned HTTP 200 for every font request.
-`/home` transferred 85,428 bytes including response overhead; `/dev/cloth`
-transferred 603,836 bytes. The local Hanken response reported `content-length:
-48268`, `encodedBodySize: 48268` and `decodedBodySize: 48268` on both routes, with
-no service worker. These are measured browser requests; route manifests may list
-fewer preload candidates than the fonts ultimately requested by rendered control
-rows.
+The previous Fraunces build measured 85,428 transferred bytes for `/home`; that historical result is not the Berean result. Record final cache-disabled `content-length`, `encodedBodySize`, `decodedBodySize` and `transferSize` values here after the production Playwright audit. Route manifests may list fewer preload candidates than rendered control rows ultimately request.
 
 ---
 
@@ -699,7 +680,7 @@ thumb) · `.row--plain`.
 States: rest · hover · `:active` background step · current · deactivated (renders
 `.row--plain` with no chevron, rather than an unreachable link).
 
-`.folio` is the lesson numeral: `--radius-xs`, `--text-heading`, Fraunces. It is
+`.folio` is the lesson numeral: `--radius-xs`, `--text-heading`, Berean Serif 600. It is
 the lesson's identity and leads — `week` and `number` never compete for the same
 weight.
 
@@ -740,7 +721,7 @@ See §7.
 ### 6.9 `.class-detail`
 
 The singular class route uses a solid, 60px sticky `.class-detail-header` with
-`.class-detail-header__back`, a fixed-copy Fraunces
+`.class-detail-header__back`, a Berean Serif 600
 `.class-detail-header__title`, and `.class-detail-header__theme`. It is normal-flow
 chrome: no blur, overlay or filtered surface.
 
@@ -845,8 +826,8 @@ both themes side by side with:
 4. every motif as a 44×44 thumb, 200×6 band and 6×96 spine;
 5. default hashes from narrow real class, lesson and sermon ID readers;
 6. visible total-element counts for the heaviest samples;
-7. Hanken, Fraunces, Source Serif 4 and Noto Serif typography controls;
-8. real-name greeting samples combining fixed Fraunces copy with a Hanken name.
+7. production Berean Serif and Hanken, Google-split Hanken and upstream Source Serif 4 controls;
+8. real-name greeting samples rendered wholly in Berean Serif, plus 22px/24px scripture and 44px/70px clipping checks.
 
 Caption plates are unblurred faux material. Both caption lines use primary text.
 The production browser rasterized all six grounds and six motif inks in both
