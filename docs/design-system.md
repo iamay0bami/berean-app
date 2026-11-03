@@ -572,7 +572,7 @@ Mobile first. Verify at **360px, 768px and desktop**.
 | Content bottom padding | `calc(var(--nav-h) + var(--space-5))` — from a token, not the current hard-coded `88px` |
 | `--nav-h` | `calc(64px + env(safe-area-inset-bottom))` |
 | `scroll-padding-block-start` | the sticky header's height, so an anchored target or a focused field never lands under it |
-| Touch targets | ≥44px, always |
+| Touch targets | `--touch-target: 44px`; targets never render smaller |
 | Horizontal scroll | Never |
 
 `100vh` is always written as the fallback pair with `100dvh` (§3.5).
@@ -736,6 +736,28 @@ documented pattern; keep it.
 ### 6.8 `CoverCloth`
 
 See §7.
+
+### 6.9 `.class-detail`
+
+The singular class route uses a solid, 60px sticky `.class-detail-header` with
+`.class-detail-header__back`, a fixed-copy Fraunces
+`.class-detail-header__title`, and `.class-detail-header__theme`. It is normal-flow
+chrome: no blur, overlay or filtered surface.
+
+`.class-detail__wrap` contains the 3:1 `.class-detail__hero`, which combines the
+production `CoverCloth` plate with the retained `.cloth-frame` hairline. The
+`.class-detail__overview` keeps the unclamped Hanken `.class-detail__name`,
+`.class-detail__description`, and semantic `.class-detail__leaders` list in one
+column on mobile and two columns from 768px. `.class-detail__tools` renders only
+role-authorized links. `.class-detail__lessons` and
+`.class-detail__lesson-list` hold full-width folio rows; live lesson titles use
+`.class-detail__lesson-title` so they remain Hanken rather than inheriting the
+generic row serif.
+
+The route-local `.class-detail-skeleton` mirrors the header, hero, overview and
+lesson rows with static `.class-detail-skeleton__block` shapes. It has no shimmer
+or timer: decorative geometry is hidden from assistive technology and one
+persistent `Loading…` status names the busy main region.
 
 ---
 
@@ -961,9 +983,10 @@ report is reviewed:
   shared `components/branded-loading.tsx` and untouched routes do not change.
 
 **Scaffolding currently in the tree:** `components/cover-cloth.tsx` and the
-admin-only `/dev/cloth` preview route exist as the retained cloth gate. No production
-screen renders a plate yet; removing the preview requires explicit approval after
-the production screens and browser matrix pass.
+admin-only `/dev/cloth` preview route remain as the retained cloth gate. Class
+detail is the first production plate; Home and Classes still do not render one.
+Removing the preview requires explicit approval after the remaining production
+screens and browser matrix pass.
 
 ---
 

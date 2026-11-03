@@ -74,6 +74,11 @@
   --radius-nav: 20px;
   --radius-pill: 999px;
 
+  /* Controls */
+  --touch-target: 44px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
   /* Type */
   --text-display: 2.75rem;
   --text-title: 1.875rem;
@@ -100,6 +105,8 @@
   --nav-pad-block: 9px;
   --nav-press-scale: 1.025;
   --nav-link-press-scale: 0.96;
+  --class-detail-header-h: 60px;
+  --border-hairline: 1px solid var(--line);
   --rail-h: 100vh;
   --glass-blur: 12px;
   --glass-saturate: 1.6;
@@ -416,6 +423,56 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 500;
 .folio { display: grid; place-items: center; inline-size: 2.25rem; block-size: 2.25rem; flex: 0 0 auto; border: 1px solid var(--line-strong); border-radius: var(--radius-xs); color: var(--accent-text); font: 500 var(--text-heading)/1 var(--font-serif); font-variant-numeric: tabular-nums; }
 
 .cloth { display: block; inline-size: 100%; block-size: 100%; }
+
+.class-detail-header { position: sticky; inset-block-start: 0; z-index: 3; block-size: var(--class-detail-header-h); background: var(--bg); border-block-end: var(--border-hairline); }
+.class-detail-header__inner { block-size: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.class-detail-header__back { justify-self: start; min-block-size: var(--touch-target); max-inline-size: 100%; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text); font: 600 var(--text-ui)/1.2 var(--font-sans); text-decoration: none; white-space: nowrap; }
+.class-detail-header__back-mark { font-size: var(--text-heading); font-weight: 400; line-height: 1; }
+.class-detail-header__back:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.class-detail-header__title { font: 500 var(--text-ui)/1.2 var(--font-serif); white-space: nowrap; }
+.class-detail-header__theme { justify-self: end; display: grid; place-items: center; }
+@media (hover: hover) { .class-detail-header__back:hover { color: var(--accent-text); } }
+.class-detail-main { padding-block: var(--space-4) var(--space-7); font-family: var(--font-sans); }
+.class-detail__wrap { min-inline-size: 0; }
+.class-detail__hero { position: relative; aspect-ratio: 3 / 1; inline-size: 100%; }
+.class-detail__overview { display: grid; gap: var(--space-6); margin-block-start: var(--space-6); }
+.class-detail__summary { min-inline-size: 0; display: grid; align-content: start; gap: var(--space-3); }
+.class-detail__name { color: var(--text); font: 600 var(--text-title)/1.12 var(--font-sans); letter-spacing: 0; overflow-wrap: anywhere; }
+.class-detail__description { color: var(--text-muted); font: 400 var(--text-body)/1.55 var(--font-sans); white-space: pre-wrap; overflow-wrap: anywhere; }
+.class-detail__leaders { min-inline-size: 0; display: grid; align-content: start; gap: var(--space-3); }
+.class-detail__leaders-title { color: var(--text); font: 600 var(--text-label)/1.3 var(--font-sans); letter-spacing: 0; }
+.class-detail__leader-list { list-style: none; display: grid; gap: var(--space-2); margin: 0; padding: 0; }
+.class-detail__leader { color: var(--text); font: 500 var(--text-body)/1.45 var(--font-sans); overflow-wrap: anywhere; }
+.class-detail__tools { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-block-start: var(--space-6); }
+.class-detail__lessons { margin-block-start: var(--space-7); }
+.class-detail__section-title { margin-block-end: var(--space-4); color: var(--text); font: 600 var(--text-heading)/1.2 var(--font-sans); letter-spacing: 0; }
+.class-detail__lesson-list { border-block-start: var(--border-hairline); }
+.class-detail__lesson-row { min-inline-size: 0; }
+.class-detail__lesson-title { color: var(--text); font: 600 var(--text-body)/1.35 var(--font-sans); overflow-wrap: anywhere; }
+.class-detail__lessons .empty__title { font-family: var(--font-sans); letter-spacing: 0; }
+.class-detail-skeleton__header-block, .class-detail-skeleton__block, .class-detail-skeleton__line, .class-detail-skeleton__folio { display: block; background: var(--bg-sunken); }
+.class-detail-skeleton__header-block { block-size: var(--space-3); border-radius: var(--radius-pill); }
+.class-detail-skeleton__header-block--back { inline-size: var(--space-8); }
+.class-detail-skeleton__header-block--title { inline-size: var(--space-8); }
+.class-detail-skeleton__header-block--theme { justify-self: end; inline-size: var(--space-6); block-size: var(--space-6); border-radius: 50%; }
+.class-detail-skeleton__block { border-radius: var(--radius-md); }
+.class-detail-skeleton__overview { margin-block-start: var(--space-6); }
+.class-detail-skeleton__summary, .class-detail-skeleton__leaders { display: grid; align-content: start; gap: var(--space-3); }
+.class-detail-skeleton__line { inline-size: 100%; block-size: var(--space-4); border-radius: var(--radius-xs); }
+.class-detail-skeleton__line--title { inline-size: 78%; block-size: var(--space-6); }
+.class-detail-skeleton__line--short { inline-size: 54%; }
+.class-detail-skeleton__line--label { inline-size: 46%; block-size: var(--space-3); }
+.class-detail-skeleton__line--leader { inline-size: 72%; }
+.class-detail-skeleton__lessons { display: grid; margin-block-start: var(--space-7); }
+.class-detail-skeleton__line--section { inline-size: 30%; block-size: var(--space-5); margin-block-end: var(--space-4); }
+.class-detail-skeleton__row { display: flex; align-items: center; gap: var(--space-4); inline-size: 100%; padding: var(--space-4) var(--space-1); border-block-start: var(--border-hairline); }
+.class-detail-skeleton__folio { color: transparent; border-color: var(--line); }
+.class-detail-skeleton__row-copy { flex: 1; min-inline-size: 0; display: grid; gap: var(--space-2); }
+.class-detail-skeleton__line--row-title { inline-size: 64%; }
+.class-detail-skeleton__line--row-meta { inline-size: 38%; block-size: var(--space-3); }
+@media (min-width: 768px) {
+  .class-detail__overview { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}
 
 .empty { display: grid; justify-items: start; gap: var(--space-2); padding: var(--space-6) 0; }
 .empty--tile { min-block-size: 190px; align-content: center; padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-raised); }

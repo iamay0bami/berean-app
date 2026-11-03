@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   }
   // Org-scoped RLS means a signed-out visitor resolves to no organization and would
   // otherwise see empty content lists, so these paths now require a session too.
-  const privatePaths = ['/profile', '/discuss', '/home', '/classes', '/sermons']
+  const privatePaths = ['/profile', '/discuss', '/home', '/classes', '/class', '/sermons']
   const privatePath = privatePaths.some(path => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))
   if (privatePath && !user) {
     const url = request.nextUrl.clone()
@@ -37,5 +37,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/discuss/:path*', '/home/:path*', '/classes/:path*', '/sermons/:path*', '/dev/:path*'],
+  matcher: ['/profile/:path*', '/discuss/:path*', '/home/:path*', '/classes/:path*', '/class/:path*', '/sermons/:path*', '/dev/:path*'],
 }
