@@ -1,4 +1,5 @@
-import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassLeader, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, Lesson, LessonEdit, LessonEditQuestion, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import { cache } from 'react'
+import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassCatalogItem, ClassDetail, ClassLeader, ClassLeaderDisplay, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, Lesson, LessonEdit, LessonEditQuestion, LessonSummary, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 import { normalizeHumanText, normalizeHumanTextArray, normalizeOptionalHumanText } from '@/lib/text'
 
@@ -199,11 +200,91 @@ export async function getClassLeaders(): Promise<ClassLeader[]> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_class_leaders')
   if (error) throw error
-  return ((data ?? []) as ClassLeader[]).map(row => ({
-    ...row,
-    leader_name: normalizeHumanText(row.leader_name),
-    leader_initials: normalizeHumanText(row.leader_initials),
-  }))
+  return ((data ?? []) as ClassLeader[])
+    .map(row => ({
+      ...row,
+      leader_name: normalizeHumanText(row.leader_name),
+      leader_initials: normalizeHumanText(row.leader_initials),
+    }))
+    .sort((left, right) => left.leader_name.localeCompare(right.leader_name, 'en', { sensitivity: 'base' }) || left.leader_id.localeCompare(right.leader_id))
+}
+
+export function formatClassLeaderSummary(leaders: ClassLeaderDisplay[]): string {
+  if (!leaders.length) return 'Leader not assigned'
+  const additional = leaders.length - 1
+  return `Led by ${leaders[0].name}${additional ? ` +${additional}` : ''}`
+}
+
+type ActiveMembershipContext = {
+  activeClasses: ActiveClass[]
+  memberIds: Set<string>
+  ledClassId: string | null
+  eligibleClassIds: string[]
+}
+
+const getActiveMembershipContext = cache(async (): Promise<ActiveMembershipContext> => {
+  const [activeClasses, myClasses, ledClass] = await Promise.all([
+    getActiveClasses(),
+    getMyClasses(),
+    getMyLedClass(),
+  ])
+  const activeIds = new Set(activeClasses.map(item => item.id))
+  const memberIds = new Set(myClasses.map(item => item.id).filter(id => activeIds.has(id)))
+  const ledClassId = ledClass.status === 'ready' && activeIds.has(ledClass.class.id)
+    ? ledClass.class.id
+    : null
+  return {
+    activeClasses,
+    memberIds,
+    ledClassId,
+    eligibleClassIds: activeClasses
+      .filter(item => memberIds.has(item.id) || item.id === ledClassId)
+      .map(item => item.id),
+  }
+})
+
+type ActiveClassContext = {
+  catalog: ClassCatalogItem[]
+}
+
+const getActiveClassContext = cache(async (): Promise<ActiveClassContext> => {
+  const [{ activeClasses, memberIds, ledClassId }, classLeaders] = await Promise.all([
+    getActiveMembershipContext(),
+    getClassLeaders(),
+  ])
+  const leadersByClass = new Map<string, ClassLeaderDisplay[]>()
+  for (const leader of classLeaders) {
+    const leaders = leadersByClass.get(leader.class_id) ?? []
+    leaders.push({
+      id: leader.leader_id,
+      name: leader.leader_name,
+      initials: leader.leader_initials,
+    })
+    leadersByClass.set(leader.class_id, leaders)
+  }
+  return {
+    catalog: activeClasses.map((activeClass): ClassCatalogItem => {
+      const leaders = leadersByClass.get(activeClass.id) ?? []
+      const isMember = memberIds.has(activeClass.id)
+      const isLeader = activeClass.id === ledClassId
+      return {
+        ...activeClass,
+        leaders,
+        leaderSummary: formatClassLeaderSummary(leaders),
+        isMember,
+        isLeader,
+        isMine: isMember || isLeader,
+      }
+    }),
+  }
+})
+
+export async function getClassCatalog(): Promise<ClassCatalogItem[]> {
+  return (await getActiveClassContext()).catalog
+}
+
+export async function getEligibleClassIds(): Promise<string[]> {
+  return (await getActiveMembershipContext()).eligibleClassIds
 }
 
 function mapSermon(row: any): Sermon {
@@ -219,6 +300,20 @@ function mapSermon(row: any): Sermon {
     paragraphs: normalizeHumanTextArray(row.paragraphs),
     marginNote: normalizeHumanText(row.margin_note),
     closing: normalizeHumanText(row.closing),
+  }
+}
+
+const LESSON_SUMMARY_SELECT = 'id,class_id,week,number,title,excerpt,duration'
+
+function mapLessonSummary(row: any): LessonSummary {
+  return {
+    id: row.id,
+    classId: row.class_id,
+    week: normalizeHumanText(row.week),
+    number: normalizeHumanText(row.number),
+    title: normalizeHumanText(row.title),
+    excerpt: normalizeHumanText(row.excerpt),
+    duration: normalizeHumanText(row.duration),
   }
 }
 
@@ -238,13 +333,7 @@ async function mapLesson(row: any): Promise<Lesson> {
     }
   })
   return {
-    id: row.id,
-    week: normalizeHumanText(row.week),
-    number: row.number,
-    title: normalizeHumanText(row.title),
-    excerpt: normalizeHumanText(row.excerpt),
-    duration: normalizeHumanText(row.duration),
-    progress: row.progress,
+    ...mapLessonSummary(row),
     sectionLabel: normalizeHumanText(row.section_label),
     quote: normalizeHumanText(row.quote),
     reference: normalizeHumanText(row.reference),
@@ -267,18 +356,65 @@ export async function getLessons() {
   return Promise.all((data ?? []).map(mapLesson))
 }
 
-// "Latest" means most recently published, not highest lesson number: a class can
-// publish out of order, or revise an earlier lesson a fortnight later.
-// `created_at` is the column the reader's meaning maps to, and limit(1) means the
-// home card no longer loads every published lesson with its insights embed.
-export async function getLatestLesson() {
-  const { supabase, user } = await getSessionUser()
-  const select = user
-    ? '*, questions(id,text,sort_order), insights(id,author_id,text,hearts,created_at)'
-    : '*, questions(id,text,sort_order)'
-  const { data, error } = await supabase.from('lessons').select(select).eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle()
+async function getPublishedLessonSummaries(classIds: string[]): Promise<LessonSummary[]> {
+  if (!classIds.length) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lessons')
+    .select(LESSON_SUMMARY_SELECT)
+    .eq('status', 'published')
+    .in('class_id', classIds)
+    .order('number')
   if (error) throw error
-  return data ? mapLesson(data) : undefined
+  return (data ?? []).map(mapLessonSummary)
+}
+
+export async function getReadableLessonSummaries(): Promise<LessonSummary[]> {
+  const { activeClasses, eligibleClassIds } = await getActiveMembershipContext()
+  const classOrder = new Map(activeClasses.map((item, index) => [item.id, index]))
+  const lessons = await getPublishedLessonSummaries(eligibleClassIds)
+  return lessons.sort((left, right) =>
+    (classOrder.get(left.classId) ?? Number.MAX_SAFE_INTEGER) - (classOrder.get(right.classId) ?? Number.MAX_SAFE_INTEGER)
+    || left.number.localeCompare(right.number),
+  )
+}
+
+// "Latest" means most recently published, not highest lesson number: a class can
+// publish out of order, or revise an earlier lesson a fortnight later. The summary
+// select intentionally omits reading-body, question, and insight data the Home card
+// does not render.
+export async function getLatestLesson(): Promise<LessonSummary | undefined> {
+  const eligibleClassIds = await getEligibleClassIds()
+  if (!eligibleClassIds.length) return undefined
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lessons')
+    .select(LESSON_SUMMARY_SELECT)
+    .eq('status', 'published')
+    .in('class_id', eligibleClassIds)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data ? mapLessonSummary(data) : undefined
+}
+
+export async function getClassDetail(classId: string): Promise<ClassDetail | undefined> {
+  const [{ catalog }, role] = await Promise.all([
+    getActiveClassContext(),
+    getCurrentRole(),
+  ])
+  const classSummary = catalog.find(item => item.id === classId)
+  if (!classSummary) return undefined
+  const viewerRole = role === 'admin'
+    ? 'admin'
+    : classSummary.isLeader
+      ? 'leader'
+      : classSummary.isMember
+        ? 'member'
+        : 'none'
+  const lessons = viewerRole === 'none' ? [] : await getPublishedLessonSummaries([classId])
+  return { ...classSummary, viewerRole, lessons }
 }
 
 export async function getLesson(id: string) {
@@ -400,11 +536,24 @@ export async function getPrayerPoints(limit?: number) {
   })
 }
 
+export async function getLatestDiscussionPrompt(): Promise<string | undefined> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('discussion_topics')
+    .select('prompt')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data ? normalizeHumanText(data.prompt) : undefined
+}
+
 export async function getDiscussionData(): Promise<DiscussionData> {
   const { supabase, user } = await getSessionUser()
   if (!user) return { prompt: DEFAULT_DISCUSSION_PROMPT, entries: [], peopleCount: 0 }
-  const [{ data: topic }, { data, error }] = await Promise.all([
-    supabase.from('discussion_topics').select('id,prompt').eq('status', 'published').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  const [prompt, { data, error }] = await Promise.all([
+    getLatestDiscussionPrompt(),
     supabase.from('discussions').select('id,author_id,text,hearts,created_at,discussion_replies(id,author_id,text,hearts,created_at)').order('created_at', { ascending: false }),
   ])
   if (error) throw error
@@ -423,7 +572,7 @@ export async function getDiscussionData(): Promise<DiscussionData> {
     }
   })
   return {
-    prompt: normalizeHumanText(topic?.prompt ?? DEFAULT_DISCUSSION_PROMPT),
+    prompt: prompt ?? DEFAULT_DISCUSSION_PROMPT,
     entries,
     peopleCount: new Set(authorRows.map(row => row.author_id)).size,
   }
@@ -479,6 +628,7 @@ export async function getClothPreviewData(): Promise<{ seeds: string[]; classes:
 }
 
 export async function getHomeData() {
-  const [lesson, sermons, prayers] = await Promise.all([getLatestLesson(), getSermons(1), getPrayerPoints(1)])
+  const [latestLesson, sermons, prayers] = await Promise.all([getLatestLesson(), getSermons(1), getPrayerPoints(1)])
+  const lesson = latestLesson ? await getLesson(latestLesson.id) : undefined
   return { lesson, sermon: sermons[0], prayer: prayers[0] }
 }

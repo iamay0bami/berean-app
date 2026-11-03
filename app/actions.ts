@@ -277,14 +277,19 @@ function randomSuffix() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
 }
 
-// Every lesson write refreshes the authoring list, the member-facing routes, and /home —
-// getHomeData() features lessons[0], so publishing can change what the home page shows.
+function revalidateClassPaths() {
+  revalidatePath('/home')
+  revalidatePath('/classes')
+  revalidatePath('/class/[classId]', 'page')
+}
+
+// Lesson writes refresh authoring, the individual reader, every class detail that
+// may gain or lose the lesson, and the Home/Classes summaries.
 function revalidateLessonPaths(id: string) {
   revalidatePath('/author/lessons')
   revalidatePath(`/author/lessons/${id}`)
-  revalidatePath('/classes')
   revalidatePath(`/classes/${id}`)
-  revalidatePath('/home')
+  revalidateClassPaths()
 }
 
 export type LessonInput = {
@@ -573,6 +578,7 @@ export async function createDiscussionTopic(prompt: string, lessonId?: string, s
     const { error } = await supabase.from('discussion_topics').insert({ prompt: requireText(prompt), lesson_id: lessonId ?? null, sermon_id: sermonId ?? null, created_by: user.id })
     if (error) return { error: error.message }
     revalidatePath('/discuss')
+    revalidatePath('/home')
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to create this topic.' }
@@ -584,6 +590,9 @@ export async function assignUserRole(userId: string, role: 'member' | 'class_lea
     const { supabase } = await userClient()
     const { error } = await supabase.rpc('assign_user_role', { target_user_id: userId, new_role: role, new_class_id: classId ?? null })
     if (error) return { error: error.message }
+    revalidatePath('/admin/members')
+    revalidatePath('/admin/classes')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to save this role.' }
@@ -629,7 +638,7 @@ export async function createClass(name: string, description?: string): Promise<{
       if (!error) {
         revalidatePath('/admin/members')
         revalidatePath('/admin/classes')
-        revalidatePath('/classes')
+        revalidateClassPaths()
         return { error: null, id: (data as { id: string } | null)?.id ?? candidate }
       }
       if (error.code !== '23505') return { error: error.message, id: null }
@@ -650,7 +659,7 @@ export async function updateClass(id: string, name: string, description?: string
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
     revalidatePath('/admin/classes')
-    revalidatePath('/classes')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to update this class.' }
@@ -666,7 +675,7 @@ export async function deactivateClass(id: string): Promise<{ error: string | nul
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
     revalidatePath('/admin/classes')
-    revalidatePath('/classes')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to deactivate this class.' }
@@ -682,7 +691,7 @@ export async function activateClass(id: string): Promise<{ error: string | null 
     if (error) return { error: error.message }
     revalidatePath('/admin/members')
     revalidatePath('/admin/classes')
-    revalidatePath('/classes')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to activate this class.' }
@@ -726,7 +735,7 @@ export async function deleteClass(id: string): Promise<{ error: string | null }>
     if (!data?.length) return { error: WRITE_DENIED_CLASS }
     revalidatePath('/admin/members')
     revalidatePath('/admin/classes')
-    revalidatePath('/classes')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to delete this class.' }
@@ -742,6 +751,7 @@ export async function assignClassMember(userId: string, classId: string): Promis
     if (error) return { error: error.message }
     revalidatePath('/admin/classes')
     revalidatePath('/classes/manage')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to add this member.' }
@@ -755,6 +765,7 @@ export async function removeClassMember(userId: string, classId: string): Promis
     if (error) return { error: error.message }
     revalidatePath('/admin/classes')
     revalidatePath('/classes/manage')
+    revalidateClassPaths()
     return { error: null }
   } catch (cause) {
     return { error: cause instanceof Error ? cause.message : 'Unable to remove this member.' }

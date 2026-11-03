@@ -12,14 +12,17 @@ export interface LessonThought {
   hearts: number
 }
 
-export interface Lesson {
+export interface LessonSummary {
   id: string
+  classId: string
   week: string
   number: string
   title: string
   excerpt: string
   duration: string
-  progress: number
+}
+
+export interface Lesson extends LessonSummary {
   sectionLabel: string
   quote: string
   reference: string
@@ -100,6 +103,27 @@ export interface ClassLeader {
   leader_id: string
   leader_name: string
   leader_initials: string
+}
+
+export interface ClassLeaderDisplay {
+  id: string
+  name: string
+  initials: string
+}
+
+export interface ClassCatalogItem extends ActiveClass {
+  leaders: ClassLeaderDisplay[]
+  leaderSummary: string
+  isMember: boolean
+  isLeader: boolean
+  isMine: boolean
+}
+
+export type ClassDetailViewerRole = 'admin' | 'leader' | 'member' | 'none'
+
+export interface ClassDetail extends ClassCatalogItem {
+  viewerRole: ClassDetailViewerRole
+  lessons: LessonSummary[]
 }
 
 // Admin-side class row: ActiveClass plus the active flag. Unlike getActiveClasses(),

@@ -91,20 +91,7 @@
   `[data-theme]`, defaulting to `prefers-color-scheme`. The choice is stored
   in a cookie and applied on the server so there is no flash of the wrong
   theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
-- Typography: Fraunces is limited to fixed English copy and loads the `latin`
-  subset only. Hanken Grotesk renders every user-authored or database-authored
-  string through the single self-hosted variable file
-  `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`; keep `--font-interface`, weight
-  100–900, `display: 'swap'` and preload enabled. The Google-split Hanken may
-  appear only as a route-local `/dev/cloth` control. Do not route fonts with
-  `:lang()` unless persisted content gains a reliable language field. Source
-  Serif 4 and Noto Serif may also appear only as admin-preview controls until a
-  separate reading-serif decision records Rendered Fonts behavior and exact
-  transfer weight. The 2026-10-31 production Rendered Fonts gate keeps all 18
-  realistic Yoruba clusters entirely in local Hanken, so the Hanken-only contract
-  passes. `ɓ`, `ɗ`, `ƙ` and `₦` remain labelled upstream gaps and fall back to
-  Arial. This clears only the interface-font gate; Batch 3 screens still require
-  explicit approval.
+- Typography: production uses two self-hosted local fonts through `next/font/local`. Berean Serif is the static 600 normal display face from `app/fonts/berean-serif/BereanSerif-SemiBold.woff2`; it renders headings, including live names and titles, the complete Home greeting, folio numerals and scripture quotations. Never request or synthesize another Berean Serif weight or style. Hanken Grotesk renders controls, metadata, descriptions, prayers, thoughts, summaries, long-form lesson and sermon prose, and all remaining body/interface copy through `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`; keep `--font-interface`, weight 100–900, normal style, `display: 'swap'` and preload enabled. Display role overrides content origin: there is no fixed-copy/live-data family split. Do not route fonts with `:lang()`. The admin-only `/dev/cloth` gate retains local production Berean and Hanken, Google-split Hanken as a negative control, and Google Source Serif 4 only as the upstream split control. The 18 realistic Yoruba clusters must remain in each applicable local production file; `ṣ́` is labelled invalid orthography, NFD `n` + U+0301 remains diagnostic, and `ɓ`, `ɗ`, `ƙ`, and `₦` remain labelled known production coverage gaps. Class-detail content typography remains Hanken until its next redesign.
 - Icons: Lucide at the pinned exact version, one size scale, one stroke
   width. Every icon-only button has an accessible name. No second icon
   library without approval.
