@@ -31,6 +31,8 @@
   their insight, discussion post, etc.) must go through `member_display()`
   — never a direct join/select against `profiles` for anyone other than
   the current user. `profiles` RLS is self+admin-read only by design.
+  Class-leader identity on Classes/detail uses the existing narrow
+  `getClassLeaders()` / `get_class_leaders` path, not `member_display()`.
 - Profile creation is owned exclusively by the `handle_new_user()` trigger
   on `auth.users`. Never self-heal a missing profile row from application
   code — that duplicates trigger logic in a second place and can mask a
@@ -91,14 +93,16 @@
   `[data-theme]`, defaulting to `prefers-color-scheme`. The choice is stored
   in a cookie and applied on the server so there is no flash of the wrong
   theme. Check contrast in both (4.5:1 body text, 3:1 UI elements).
-- Typography: production uses two self-hosted local fonts through `next/font/local`. Berean Serif is the static 600 normal display face from `app/fonts/berean-serif/BereanSerif-SemiBold.woff2`; it renders headings, including live names and titles, the complete Home greeting, folio numerals and scripture quotations. Never request or synthesize another Berean Serif weight or style. Hanken Grotesk renders controls, metadata, descriptions, prayers, thoughts, summaries, long-form lesson and sermon prose, and all remaining body/interface copy through `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`; keep `--font-interface`, weight 100–900, normal style, `display: 'swap'` and preload enabled. Display role overrides content origin: there is no fixed-copy/live-data family split. Do not route fonts with `:lang()`. The admin-only `/dev/cloth` gate retains local production Berean and Hanken, Google-split Hanken as a negative control, and Google Source Serif 4 only as the upstream split control. The 18 realistic Yoruba clusters must remain in each applicable local production file; `ṣ́` is labelled invalid orthography, NFD `n` + U+0301 remains diagnostic, and `ɓ`, `ɗ`, `ƙ`, and `₦` remain labelled known production coverage gaps. Class-detail content typography remains Hanken until its next redesign.
+- Typography: production uses two self-hosted local fonts through `next/font/local`. Berean Serif is the static 600 normal display face from `app/fonts/berean-serif/BereanSerif-SemiBold.woff2`; it renders headings, including live names and titles, the complete Home greeting, folio numerals and scripture quotations. Never request or synthesize another Berean Serif weight or style. Hanken Grotesk renders controls, metadata, descriptions, prayers, thoughts, summaries, long-form lesson and sermon prose, and all remaining body/interface copy through `app/fonts/hanken/HankenGrotesk-Yoruba.woff2`; keep `--font-interface`, weight 100–900, normal style, `display: 'swap'` and preload enabled. Display role overrides content origin: there is no fixed-copy/live-data family split. Do not route fonts with `:lang()`. The admin-only `/dev/cloth` gate retains local production Berean and Hanken, Google-split Hanken as a negative control, and Google Source Serif 4 only as the upstream split control. The 18 realistic Yoruba clusters must remain in each applicable local production file; `ṣ́` is labelled invalid orthography, NFD `n` + U+0301 remains diagnostic, and `ɓ`, `ɗ`, `ƙ`, and `₦` remain labelled known production coverage gaps.
 - Icons: Lucide at the pinned exact version, one size scale, one stroke
   width. Every icon-only button has an accessible name. No second icon
   library without approval.
 - Glass: real `backdrop-filter` is permitted only on `.bottom-nav` and
   `.reading-header`; every other Batch 3 glass treatment—including the moving
   nav capsule and cloth-caption plate—is faux and uses no filter. Class-detail
-  and authoring headers are solid. Declare an opaque background first, enable
+  chips have opaque fills, an inner border, a contrasting outer edge and an
+  opaque focus moat; authoring headers remain solid. On the two filtered
+  surfaces, declare an opaque background first, enable
   the light `rgba(248, 247, 244, 0.92)` or dark `rgba(24, 32, 54, 0.94)` fill
   with a capped 12px blur only inside standard/WebKit `@supports`, and restore
   the opaque background under `prefers-reduced-transparency`. Unsupported and
@@ -114,6 +118,39 @@
 - Layout: mobile first. Verify at 360px, 768px and desktop. Primary actions
   sit within thumb reach, touch targets are at least 44px, no horizontal
   scroll.
+- Classes index/detail retain the 720px `.page-wrap` and scope their gutters
+  to 24px at every width. The index shelf bleeds only to the column edges:
+  20px third-cover peek at 320px, 24px at 360px. Covers and Other-class rows
+  link to `/class/[id]`; only cover links are explicit shelf tab stops.
+- Classes index uses `getClassCatalog()` + `getReadableLessonSummaries()` in
+  parallel, with existing `getCurrentRole()` for empty copy only. Membership
+  and active leadership remain separate eligibility inputs. Detail tools and
+  lesson visibility switch exhaustively on `viewerRole`, never profile role.
+  Admin tools are labelled `Church-wide tools`; non-member guidance names all
+  leaders with `Intl.ListFormat` disjunction, or asks the church admin when
+  leaderless. There is no join button and no new RLS surface.
+- Class detail has only back/theme chips in its non-sticky header. Its full
+  class name appears once as the caption h1; no compact echo or skip link.
+  Clip only the art. The full leader list and title wrap without a clamp or
+  internal scroll, and the hero grows with them. Mobile hero top padding adds
+  `env(safe-area-inset-top, 0px)`; the 224px desktop cover resets to its normal
+  inset and has a 3:4 minimum height, not a fixed ratio that can strand a long
+  caption.
+  Reduced motion disables chip transitions and detail tool-button press scaling.
+- Classes display text is Berean 600 normal, with no synthesis; the wrapped
+  detail title uses existing `--text-title` at 1.2 leading (never below 1.15).
+  From 768px, its 224px cover uses `--text-heading` for the title and
+  `--text-ui` for leaders. Hanken carries leader lists, descriptions, metadata
+  and notes. No
+  `--type-*`/`--tracking-*` aliases: use explicit existing size declarations.
+  Detail adds only `--class-hero-min`, `--class-detail-cover-inline` and
+  `--cloth-control-edge`; do not invent another page-width/gutter system.
+- Classes lesson emptiness is a quiet paragraph, not another heading. Only
+  the index's whole-catalog-empty state uses `EmptyState`, with role-aware
+  copy/action. Index lesson metadata joins actual class/week/duration with
+  ` · ` and omits absent parts; excerpts clamp to two lines. Numbered rows
+  use `.row` plus a `.folio` child, not an undefined `.row--folio` modifier.
+  Both route loaders are static, with one status outside inert geometry.
 - Honest UI: never ship a control that does nothing, and never show a
   hard-coded figure as if it were data. Wire it or remove it.
 - Reuse existing component classes before adding new ones. One name per

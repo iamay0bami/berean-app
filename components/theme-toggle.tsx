@@ -23,7 +23,7 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener(EVENT, onChange)
 }
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ className }: { className?: string } = {}) {
   const theme = useSyncExternalStore(subscribe, read, () => 'system' as Theme)
   const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]
   const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
@@ -45,7 +45,7 @@ export default function ThemeToggle() {
 
   return (
     <button
-      className="icon-button"
+      className={`icon-button${className ? ` ${className}` : ''}`}
       type="button"
       onClick={cycle}
       aria-label={`Theme: ${LABELS[theme]}. Switch to ${LABELS[next]}.`}
