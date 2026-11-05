@@ -1,10 +1,16 @@
 import AppShell from '@/components/app-shell'
 import ClassesView from '@/components/classes-view'
-import { getActiveClasses, getLessons, getMyClasses } from '@/lib/mock-data'
+import { getClassCatalog, getCurrentRole, getReadableLessonSummaries } from '@/lib/mock-data'
 
 export default async function ClassesPage() {
-  const [lessons, myClasses, activeClasses] = await Promise.all([getLessons(), getMyClasses(), getActiveClasses()])
-  const myClassIds = new Set(myClasses.map(item => item.id))
-  const otherClasses = activeClasses.filter(item => !myClassIds.has(item.id))
-  return <AppShell><ClassesView lessons={lessons} myClasses={myClasses} otherClasses={otherClasses} /></AppShell>
+  const [catalog, lessons, role] = await Promise.all([
+    getClassCatalog(),
+    getReadableLessonSummaries(),
+    getCurrentRole(),
+  ])
+  const myClasses = catalog.filter(item => item.isMine)
+  const otherClasses = catalog.filter(item => !item.isMine)
+
+  // Role changes empty-state copy only; the readers own class/lesson eligibility.
+  return <AppShell><ClassesView lessons={lessons} myClasses={myClasses} otherClasses={otherClasses} role={role} /></AppShell>
 }

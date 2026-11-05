@@ -15,12 +15,12 @@ wrong, change it here first, then in the code — one edit, in that order.
 > figures and the decorative eyebrows are gone, and every figure left on screen
 > traces to a query or a prop.
 >
-> Read §1–§8 as a description of the system as it is. §9/§11 remain the screen
-> plan, and these surfaces are deliberately **not yet built** until their own
-> change: the lesson composer (`createInsight`), the Profile library rows
-> (`Edit profile`, reflections, reading settings), the sermon sub-tabs, the
-> class detail route, and the cloth (`CoverCloth`). Nothing in §6 is
-> aspirational.
+> Read §1–§8 as a description of the system as it is. The Classes index and
+> class detail redesign are implemented in §6.9–§6.10; their validation boundary
+> is recorded in §6.11. Home's remaining Batch 3 work is deferred in §10.1.
+> The lesson composer (`createInsight`), Profile library rows (`Edit profile`,
+> reflections, reading settings), and sermon sub-tabs remain unbuilt until their
+> own change. The retained `CoverCloth` gate is not permission to expand scope.
 
 ---
 
@@ -225,7 +225,7 @@ Two production families, both self-hosted through `next/font/local`: one static 
 | Display | **Berean Serif** | Headings, including live names and titles; complete Home greeting; folio numerals; scripture quotations |
 | Interface and body | **Hanken Grotesk** | Controls, metadata, descriptions, prayers, thoughts, summaries and long-form reading prose |
 
-Display role overrides content origin. Berean Serif is a static 600 normal, optical-size-20 instance; never request or synthesize another serif weight or style. Hanken remains the 100–900 variable interface face. Do not use `:lang()` for font routing. Class-detail content typography remains Hanken as a temporary exception until that screen's next redesign.
+Display role overrides content origin. Berean Serif is a static 600 normal, optical-size-20 instance; never request or synthesize another serif weight or style. Hanken remains the 100–900 variable interface face. Do not use `:lang()` for font routing. Class-detail names and lesson titles now follow the display rule; descriptions, leader lists and metadata remain Hanken.
 
 ### 2.1 Subsets and the Yoruba gate
 
@@ -303,7 +303,7 @@ The six-screen automated matrix passes 360px, 768px, 320px reflow and CSS 200% r
 
 | Token | Size / line-height | Family | Weight | Used for |
 | --- | --- | --- | --- | --- |
-| `--text-display` | 2.75rem / 1.02 | Berean Serif | 600 | Complete Home greeting |
+| `--text-display` | 2.75rem / 1.05 | Berean Serif | 600 | Complete Home greeting and Classes index title |
 | `--text-title` | 1.875rem / 1.08 | Berean Serif | 600 | Class, lesson and sermon content titles |
 | `--text-heading` | 1.375rem / 1.2 | Berean Serif | 600 | Section and compact display headings |
 | `--text-reading` | 1.1875rem / 1.62 | Hanken | 400 | Long-form reading prose |
@@ -313,13 +313,13 @@ The six-screen automated matrix passes 360px, 768px, 320px reflow and CSS 200% r
 | `--text-micro` | 0.6875rem / 1.2 | Hanken | 600 | Rail readout and nav labels |
 
 Reading measure remains `--measure: 34rem`. Fixed headings use `text-wrap: balance`;
-paragraphs use `text-wrap: pretty`. Heading and quote roles may render live values in Berean Serif; summaries, descriptions and prose remain Hanken. Class-detail content typography temporarily remains Hanken until that screen's next redesign.
+paragraphs use `text-wrap: pretty`. Heading and quote roles may render live values in Berean Serif; summaries, descriptions and prose remain Hanken. The single-line `--text-title` table entry uses 1.08, but the wrapped class-detail title overrides it to 1.2 leading (never below 1.15). From 768px its 224px cover uses `--text-heading` at the same 1.2 leading. Classes shelf titles use `--text-body` at 1.3. These are explicit family/weight/size/line-height declarations, not `--type-*` or `--tracking-*` aliases.
 
 ### 2.3 Resolved role map
 
 - Berean Serif 600 normal: display headings and names, scripture quotations, folio numerals and brand marks.
 - Hanken: controls, metadata, descriptions, summaries, prayers, thoughts, posts, margin notes, loading copy and long-form lesson/sermon prose.
-- Class-detail content typography remains Hanken until its next redesign; only its compact fixed header uses Berean.
+- Classes index/detail titles and lesson titles use Berean; leader lists, metadata, descriptions and access/empty notes use Hanken.
 
 ### 2.4 NFC and identifiers
 
@@ -397,8 +397,9 @@ already has. Tokenised, used only on cloth plates.
 ### 3.4 Glass
 
 Real `backdrop-filter` is permitted on exactly `.bottom-nav` and
-`.reading-header`. Class-detail and authoring headers are solid. The moving nav
-capsule and cloth captions are faux material with no filter.
+`.reading-header`. Authoring headers are solid. Class detail has opaque faux-glass
+chips over cloth, not a sticky header surface. The moving nav capsule and cloth
+captions are also faux material with no filter.
 
 ```css
 /* light */
@@ -555,7 +556,7 @@ Mobile first. Verify at **360px, 768px and desktop**.
 
 | Element | Spec |
 | --- | --- |
-| `.page-wrap` | `max-width: 720px`, centred, `padding-inline: var(--space-5)` (20px at 360px) |
+| `.page-wrap` | `max-width: 720px`, centred, including its gutters. Legacy screens use 20px below 760px; Classes index/detail scope their gutters to `var(--space-5)` (24px) at every width. |
 | Content bottom padding | `calc(var(--nav-h) + var(--space-5))` — from a token, not the current hard-coded `88px` |
 | `--nav-h` | `calc(64px + env(safe-area-inset-bottom))` |
 | `scroll-padding-block-start` | the sticky header's height, so an anchored target or a focused field never lands under it |
@@ -586,7 +587,7 @@ full border and the theme's glass shadow.
 - Reduced motion makes the capsule jump immediately and removes link/capsule
   press scaling. Focus rings remain above the capsule.
 
-### 5.3 Headers — four variants
+### 5.3 Headers — four shared variants and class detail
 
 | Variant | Contents | Used on |
 | --- | --- | --- |
@@ -594,6 +595,7 @@ full border and the theme's glass shadow.
 | `ReadingHeader` | Back + the lesson's week; sticky, glass | Lesson and sermon reading |
 | `FormHeader` | Back + the screen's own title; sticky, **no glass**, nav not rendered | The authoring routes |
 | `AuthHeader` | Brand mark only | Auth screens |
+| `.class-detail-header` | Back chip + theme chip over cloth, not sticky; no compact title echo | Class detail |
 
 The header bell is removed: no table, no concept, no route. The reading header
 loses its `⋯` button, which has no menu behind it.
@@ -607,6 +609,7 @@ loses its `⋯` button, which has no menu behind it.
 | Other forms (admin, class manage) | Nothing — they scroll, and keep the nav |
 | Lists | None — the title scrolls away |
 | Home | None |
+| Class detail | None — the chips and full title scroll with the content-sized hero |
 
 ### 5.5 The authoring routes
 
@@ -680,8 +683,9 @@ dot**, so state is never colour-only. Replaces mono-uppercase `ACTIVE` /
 ### 6.5 `.row`
 
 One component for lesson, class, sermon, roster and library rows.
-`.row--folio` (leads with the numbered folio square) · `.row--plate` (cloth
-thumb) · `.row--plain`.
+A numbered lesson uses `.row` with a `.folio` child; there is no `.row--folio`
+CSS definition. `.row--plate` supplies the cloth-leading Classes index row;
+`.row--plain` is the plain variant.
 
 States: rest · hover · `:active` background step · current · deactivated (renders
 `.row--plain` with no chevron, rather than an unreachable link).
@@ -726,25 +730,198 @@ See §7.
 
 ### 6.9 `.class-detail`
 
-The singular class route uses a solid, 60px sticky `.class-detail-header` with
-`.class-detail-header__back`, a Berean Serif 600
-`.class-detail-header__title`, and `.class-detail-header__theme`. It is normal-flow
-chrome: no blur, overlay or filtered surface.
+The singular class route has one full identity, not a compact header echo.
+`.class-detail-main` contains the existing 720px `.page-wrap` as
+`.class-detail__wrap`, with 24px gutters. Below 768px the `.class-detail__hero`
+bleeds to the column edges. Its grid holds `.class-detail-header`, a minimum
+48px cloth gap, and the caption. Mobile top padding adds
+`env(safe-area-inset-top, 0px)` to `--space-5`; the 768px cover resets to its
+normal `--space-3` inset. Only the absolutely positioned
+`.class-detail__art` clips; the hero and its meaningful children are not hidden
+from assistive technology.
 
-`.class-detail__wrap` contains the 3:1 `.class-detail__hero`, which combines the
-production `CoverCloth` plate with the retained `.cloth-frame` hairline. The
-`.class-detail__overview` keeps the unclamped Hanken `.class-detail__name`,
-`.class-detail__description`, and semantic `.class-detail__leaders` list in one
-column on mobile and two columns from 768px. `.class-detail__tools` renders only
-role-authorized links. `.class-detail__lessons` and
-`.class-detail__lesson-list` hold full-width folio rows; live lesson titles use
-`.class-detail__lesson-title` so they remain Hanken rather than inheriting the
-generic row serif.
+From 768px the hero is a 224px cover beside a 424px grouped content column, with
+24px between them. The cover has a **3:4 minimum height, not a fixed aspect-ratio
+constraint**: a long caption grows the cloth with it. The outer flex layout can
+wrap when text enlargement makes the two columns too narrow. Neither column is
+stretched to match the other's content height.
 
-The route-local `.class-detail-skeleton` mirrors the header, hero, overview and
-lesson rows with static `.class-detail-skeleton__block` shapes. It has no shimmer
-or timer: decorative geometry is hidden from assistive technology and one
-persistent `Loading…` status names the busy main region.
+The only new tokens are:
+
+| Token | Value | Contract |
+| --- | --- | --- |
+| `--class-hero-min` | `17.5rem` | Mobile minimum, never a text-height cap |
+| `--class-detail-cover-inline` | `14rem` | Desktop cover width and the basis of its 3:4 minimum height |
+| `--cloth-control-edge` | light: `var(--glass-solid)`; explicit/system dark: `var(--text)` | Contrasting outer chip edge against cloth |
+
+The retired `--class-detail-header-h` and compact header/overview layout rules
+are removed. No `--page-max`, `--page-gutter-narrow`, `--type-*` or `--tracking-*`
+token is added.
+
+**Header and chips.** `.class-detail-header` is a normal-flow, non-sticky row
+containing only back and theme chips. `.class-detail-header__back` is a real
+`/classes` link named `Back to Classes`. Both controls use
+`.class-detail-header__chip` on the existing `.icon-button`: 44px, round, opaque
+fill, 1px `--line-strong` inner border and a 2px contrasting outer edge. A 2px
+opaque inset guard separates the border from the faux sheen/highlight. Hover and
+press use existing raised/sunken fills; no filter or blur is applied.
+
+Keyboard focus uses a 2px ring at 4px offset, with opaque material on both sides
+of the ring and a contrasting outer edge beyond it. The focus moat extends 8px,
+with the edge at 10px; all dimensions derive from the existing focus tokens.
+Reduced motion removes the chip transition and disables detail tool-button press
+scaling. `ThemeToggle` accepts only an
+optional appended `className`; its cookie, Light → Dark → System cycle, labels
+and ordinary callers are unchanged. Neither this screen nor the index adds a
+skip link.
+
+**Caption.** `.class-detail__overview` reuses `.cloth-caption` and
+`.cloth-caption--class`, but is a relative grid child, not an absolute text box.
+`.class-detail__name` is the sole h1, Berean Serif 600 normal at `--text-title`
+with 1.2 leading, no synthesis and no clamp. From 768px, the narrow 224px cover
+uses `--text-heading` for this title and `--text-ui` for each
+`.class-detail__leader`. `.class-detail__leaders`,
+`.class-detail__leaders-title`, `.class-detail__leader-list` and
+`.class-detail__leader` expose a complete semantic list in Hanken. With no
+leaders the list says `Leader not assigned`. Full names wrap, the plate grows,
+and there is no internal scrolling pane. Reduced transparency makes the plate
+opaque through the shared production-caption modifier.
+
+**Grouped content.** `.class-detail__summary` is one `.card.card--borderless`
+containing the actual `.class-detail__description` (omitted when absent), tools
+when authorized, and lessons. The scoped borderless modifier retains a physical
+transparent border, rounded shape and existing light/dark elevation tokens.
+The description is Hanken, selectable and unclamped.
+
+`.class-detail__tools`, `.class-detail__tools-label` and
+`.class-detail__tool-links` render from an exhaustive switch on `viewerRole`:
+
+| Role | Tools |
+| --- | --- |
+| `admin` | Visible `Church-wide tools` label; `Manage classes` → `/admin/classes`; `Manage lessons` → `/author/lessons` |
+| `leader` | `Manage this class` → `/classes/manage`; `Manage lessons` → `/author/lessons` |
+| `member` / `none` | No tool slot or artificial gap |
+
+`.class-detail__lessons`, `.class-detail__section-title`,
+`.class-detail__lesson-list`, `.class-detail__lesson-row` and
+`.class-detail__lesson-title` reuse real folios and Berean `.row__title` headings.
+Week/duration metadata omits absent parts. Authorized empty lessons use the quiet
+`.class-detail__note`: `Lessons are on the way. Published lessons will appear
+here.` There is no repeated EmptyState heading.
+
+The `none` branch never renders lesson rows, even if a malformed presentation
+prop contains them. Its `.class-detail__access-note` uses primary text on
+`--community-soft`: `Lessons are for class members. Ask A or B to add you.`
+Names preserve reader order through
+`Intl.ListFormat('en', { style: 'long', type: 'disjunction' })`. With no leaders
+it asks `your church admin to add you`. There is no join/contact button.
+`getClassDetail()` and its route, reader errors, not-found handling, RLS and
+management destinations remain unchanged; profile role is not a permission test.
+
+**Loading.** The route-local `.class-detail-skeleton` mirrors the two chips,
+content-sized hero/caption, grouped card and folio rows. Its
+`__header-block`, `__block`, `__line` variants, `__row`, `__row-copy` and `__folio`
+are static, inert geometry hidden from assistive technology. One
+`Loading class…` status sits outside the busy main region. No fake controls,
+shimmer or rotating phrases are rendered.
+
+### 6.10 Classes index
+
+`ClassesView` is a server component. `.classes-page`, `.classes-page__title` and
+`.classes-section` scope the existing page, section and title primitives; they
+leave other screens' layout untouched. The reading order is **Your classes →
+Other classes → Lessons from your classes**. The title uses `--text-display`,
+Berean Serif 600 normal with 1.05 leading. No intro filler or dead section action
+is rendered.
+
+`.class-shelf`, `.class-shelf__item`, `.class-shelf__link` and
+`.class-shelf__art` provide native horizontal scrolling and whole-cover links to
+`/class/[id]`. Only the art layer clips. The shelf bleeds to the column edges,
+with 24px starting/ending padding, 12px gaps and page-aligned scroll padding.
+Covers are 126×168 at 320px, 144×192 from 360px and 168×224 from 768px. The measured
+third-cover peek is **20px at 320px and 24px at 360px**. The shelf never becomes
+a grid or an unbounded desktop viewport region. The ul has no separate tab stop;
+Tab reaches each cover and native focus scrolling reveals off-screen links.
+Reduced motion disables snap.
+
+`.cloth-caption--class` supplies the production roles without changing preview
+captions: `.cloth-caption__title` is Berean 600 normal, `--text-body` / 1.3;
+`.cloth-caption__leaders` is Hanken 500, `--text-ui` / 1.45. Both use primary text
+and clamp to two lines on the shelf. Full titles remain the links' accessible
+names; descriptions expose every sorted leader rather than just `+N`. Full
+content is on detail. Caption material is faux, with an opaque fallback and a
+reduced-transparency override.
+
+`.class-row-list`, `.class-row__thumb` and the scoped `.row--plate` make Other
+classes a single column of whole-row links with a 44px cloth thumb, class title,
+leader summary and chevron. No description teaser, join control or count is
+invented. `.card--borderless` supplies the same quiet rounded surface as detail.
+
+`.class-row-list--lessons` uses `.row` with a `.folio` child, not an undefined
+`.row--folio` modifier. The Berean title stays primary. One `.row__meta` paragraph
+joins the actual class name, week and duration with ` · `, omitting absent parts;
+`.classes-page__excerpt` clamps an existing excerpt to two lines. Lesson links
+remain `/classes/[lessonId]`.
+
+Only a completely empty catalog uses `.empty`. Admins get a real
+`/admin/classes` action; others are told that classes appear after their church
+admin creates them. Personal and Other-class emptiness use `.classes-page__note`.
+An admin without eligible classes gets neutral copy, not a request to ask another
+admin. Empty lessons say `Published lessons from your classes will appear here.`
+
+The page fetches `getClassCatalog()`, `getReadableLessonSummaries()` and existing
+`getCurrentRole()` concurrently. Role changes empty copy only. `isMine` and the
+shared active membership/led-class context own eligibility, including for admins.
+Class leaders come from the existing narrow `getClassLeaders()` /
+`get_class_leaders` path, not direct cross-member profile reads or
+`member_display()`. No reader, migration or RLS surface is introduced.
+
+`.classes-skeleton` uses the same shelf and row geometry. `.skeleton-block` is
+scoped to it; the `classes-skeleton__title`, `__heading`, `__cover`, `__row`,
+`__copy`, `__line`, `__line--short`, `__thumb` and `__folio` classes are static
+shapes. One `Loading classes…` status remains outside the inert, hidden geometry
+and busy main region. The shared branded loader is unchanged.
+
+### 6.11 Classes validation boundary — 2026-11-05
+
+Automated **synthetic** detail fixtures used the production component and built
+CSS at 320, 360, 768 and 1024px, in both themes, for leader/member/non-member
+roles. Document widths matched viewport widths throughout normal, 200% text
+resize and WCAG text-spacing checks. Keyboard order was back → theme → authorized
+tools → available lessons. The accessibility tree retained the sole h1 and full
+leader list. Chips measured 44×44. System-dark tokens, reduced motion, opaque
+reduced-transparency captions and forced-colors focus were also checked.
+
+The long Yoruba title plus four leaders grows the hero rather than spilling
+outside the cloth. After the wrapped-title correction, its caption occupied
+74.4% of a 547.05px mobile hero at 320px and 75.1% of a 466.13px hero in the
+224px desktop cover. At 200% text the mobile plate occupied 91.8% of the grown
+hero. **The plate can dominate the cloth**;
+full readable content takes priority, with a 48px cloth gap retained above it.
+This is not a promise that arbitrary text preserves a nominal 3:4 silhouette.
+The worst-case title used only the local Berean Serif physical font.
+
+Raster checks sampled actual PNG glyph cores and adjacent painted surfaces at
+DPR 2. All six grounds and six inks were checked in both themes at rest, hover,
+press, focus, focus-hover and focus-press: 144 cases. Minima across those cases:
+
+| Pair | Light | Dark |
+| --- | ---: | ---: |
+| Caption text | 13.655:1 | 12.492:1 |
+| Chip icon | 13.183:1 | 11.295:1 |
+| Inner border / opaque inset guard | 3.560:1 | 3.873:1 |
+| Outer chip edge / cloth | 3.561:1 | 3.160:1 |
+| Focus ring / opaque moat, both adjacent sides | 3.666:1 | 8.585:1 |
+
+Pass A's real signed-in captures showed an admin without personal eligibility;
+its populated shelf, lesson fixtures and Yoruba clamp checks were synthetic.
+Pass B's requested live admin captures of Test A, Test B and Kíláàsì Yorùbá were
+blocked by the tool environment's PII safeguard. **They are not verified by the
+synthetic matrix.** Live role/RLS behavior, theme-cycle integration on detail,
+Safari/older WebViews and developer signed-in sign-off remain outstanding.
+Build/typecheck and these fixtures do not close that gate. No additional font,
+image file or dependency ships in either pass; inline SVG/HTML is not zero-byte
+payload.
 
 ---
 
@@ -768,8 +945,8 @@ One seed, four production variants, so a class's cover and its small marks agree
 
 | Variant | ViewBox | Used for |
 | --- | --- | --- |
-| `cover` | `0 0 100 100`, `xMidYMid slice` | 3:4 class shelf covers: 126×168 through 144×192, then 168×224 |
-| `plate` | `0 0 100 100`, `xMidYMid slice` | 3:1 class-detail hero and other square-source crops |
+| `cover` | `0 0 100 100`, `xMidYMid slice` | 3:4 shelf covers (126×168, 144×192, 168×224) and the content-sized detail hero/cover |
+| `plate` | `0 0 100 100`, `xMidYMid slice` | Other square-source plates and the retained 3:1 preview crops |
 | `strip` | `0 0 100 8`, `preserveAspectRatio="none"` | 6px lesson band |
 | `spine` | `0 0 8 100` | 6px vertical spine |
 | `thumb` | `0 0 100 100` | 44px row thumb, rhythm capped at four |
@@ -809,7 +986,7 @@ luminance; inter-ground checks use CIE76 and hue checks use OKLCH.
 
 | Surface | Treatment | Reasoning |
 | --- | --- | --- |
-| Class | 3:4 cover on shelves; cloth-only 3:1 detail hero | The cover is identity; live name/leaders sit on Hanken surfaces |
+| Class | 3:4 shelf covers; full-bleed mobile detail hero / desktop cover, growing with the caption | Cloth identifies the class; Berean names and Hanken leader lists share a faux caption plate |
 | Lesson | **A 6px cloth band, plus the rail** — not a big image | Reading content stays above decoration |
 | Sermon | 16:9 letterbox plate | A sermon is a dated object — a bulletin |
 | Profile | The avatar becomes a **bookplate**: initials stamped in a cloth ring | A library card rather than a social avatar |
@@ -942,40 +1119,38 @@ does.**
 10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections
     built then are the content that would move.
 
-### 10.1 Batch 3 screen contract — deferred after the cloth gate
+### 10.1 Batch 3 progress — Classes implemented, Home work deferred
 
-These screens are designed but are not authorized until the Stage B cloth/font
-report is reviewed:
+The Classes index and class detail contracts are implemented in §6.9–§6.10,
+with the unclosed validation gates in §6.11. Their approved amendments supersede
+the earlier two-column Other-class tiles, Hanken display titles, sticky detail
+header, compact name echo and repeated lesson empty headings.
 
-- Home and Classes share a full-bleed horizontal snap shelf with page-aligned
-  `scroll-padding-inline`, 12px gaps, 126×168 covers at 320px, 144×192 at 360px,
-  and 168×224 from 768px. The next-card sliver is 24px at 320 and 28px at 360.
-- Cover captions render live values in Hanken. Leader summaries are `Leader not
-  assigned`, `Led by A`, or `Led by A +N`, with the full sorted list exposed to
-  assistive technology and on class detail.
-- Other-class tiles preserve 110px text width at 320 and 130px at 360; class name,
-  leader summary and description clamp to two lines, with full content on detail.
-- The Classes lesson section is named **Lessons from your classes**.
-- `/class/[classId]` uses a 60px solid normal-flow sticky header above a cloth-only
-  3:1 hero. Full Hanken class name, semantic leader list and description sit below
-  the hero. A non-member with no class leaders is told `Ask your church admin`.
+- Classes uses a column-edge shelf with 24px gutters and 20px/24px third-cover
+  peeks at 320px/360px. Other classes are whole-row links. Lessons remain last
+  and eligibility-scoped, with the actual class name in their metadata.
+- Detail uses a full, unclamped identity caption over a growing cloth hero/cover.
+  Its two chips are faux and opaque, never filtered. Tools switch on detail
+  `viewerRole`; a named-leader non-member note is not a join control.
 - Personal class/lesson data is active explicit memberships plus the separately
-  modelled active led class. `getClassLeaders()` supplies every leader; do not use
-  `member_display()` for class leaders.
-- The Home Community tile uses the latest published discussion topic. The prayer
-  tile must not link until Sermons adds the currently missing `#prayer-points`
-  anchor.
-- Bottom navigation uses a faux-glass moving capsule. Real filters remain only on
-  the nav surface and reading header. Authoring lesson forms hide nav through one
-  shared route matcher.
-- Home, Classes and class detail get static shape-matched skeletons only; the
-  shared `components/branded-loading.tsx` and untouched routes do not change.
+  modelled active led class. Existing `getClassLeaders()` supplies every leader;
+  do not replace it with direct profile lookups or `member_display()`.
+- Home's remaining shelf and community/prayer composition is still deferred.
+  Its Community tile is intended to use the latest published discussion topic;
+  its prayer tile must not link until Sermons supplies the `#prayer-points`
+  anchor. Do not describe these as shipped or copy Classes changes into Home
+  without its own screen-group task.
+- The existing bottom nav retains its faux-glass moving capsule. Real filters
+  remain only on the nav surface and reading header. Authoring lesson forms
+  retain the shared route matcher that hides nav.
+- Classes and detail have static, shape-matched skeletons. Home's corresponding
+  work is still deferred; shared `components/branded-loading.tsx` is unchanged.
 
-**Scaffolding currently in the tree:** `components/cover-cloth.tsx` and the
-admin-only `/dev/cloth` preview route remain as the retained cloth gate. Class
-detail is the first production plate; Home and Classes still do not render one.
-Removing the preview requires explicit approval after the remaining production
-screens and browser matrix pass.
+`CoverCloth` now appears on Classes and class detail. Home does not yet render a
+production plate. The admin-only `/dev/cloth` route remains the retained
+cloth/font gate; removing it still requires explicit approval. No new reader,
+migration, RPC, RLS surface, dependency or font/image file was needed for these
+two Classes passes.
 
 ---
 
