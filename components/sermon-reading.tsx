@@ -14,7 +14,7 @@ export default function SermonReading({ sermon }: { sermon: Sermon }) {
       <main className="reading-content sermon-reading">
         <Meta>{sermon.detailDate} · {sermon.speaker}</Meta>
         <h1>{sermon.title}</h1>
-        <p className="reading-deck">{sermon.text}</p>
+        <p className="reading-deck reading-deck--summary">{sermon.text}</p>
         <Rule />
         <div className="reading-copy">
           {sermon.paragraphs.map((paragraph, index) => (

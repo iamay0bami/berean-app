@@ -47,7 +47,7 @@ export default function LessonReading({ lesson }: { lesson: Lesson }) {
       <main className="reading-content">
         <Meta>{lesson.sectionLabel}</Meta>
         <h1>{lesson.title}</h1>
-        {lesson.quote && <p className="reading-deck">{lesson.quote}</p>}
+        {lesson.quote && <p className="reading-deck reading-deck--scripture">{lesson.quote}</p>}
         {lesson.reference && <Meta>{lesson.reference}</Meta>}
         <Rule />
         <div className="reading-copy">

@@ -256,8 +256,8 @@ rather than treating an invalid consonant-plus-tone sample as orthography.
 
 The admin-only `/dev/cloth` gate compares production Berean Serif and local Hanken with route-local Google-split Hanken and Source Serif 4 controls. Noto Serif and Fraunces are removed. No control font ships on production screens.
 
-Render the exact NFC string and inspect each difficult cluster at 14px, 16px and
-19px in both themes:
+Render the exact NFC string and inspect each difficult cluster at 14px, 16px,
+19px, 22px, 24px, 30px and 32px in both themes:
 
 ```
 m̀ M̀ ḿ Ḿ ǹ Ǹ Ń ń Ẹ́ Ọ̀ ẹ̄ ṣ Ṣ ọ ẹ ị ụ ṅ Àmín Ọ̀rọ̀ Ẹ̀mí ìgbàgbọ́
@@ -265,8 +265,8 @@ m̀ M̀ ḿ Ḿ ǹ Ǹ Ń ń Ẹ́ Ọ̀ ẹ̄ ṣ Ṣ ọ ẹ ị ụ ṅ Àmín
 
 Also render individually inspectable `m̀`, `M̀`, `ḿ`, `Ḿ`, `ǹ`, `Ǹ`, `Ń`, `ń`,
 `Ẹ́`, `Ọ̀`, `ẹ̄`, `ṣ`, `Ṣ`, `ọ`, `ẹ`, `ị`, `ụ` and `ṅ`. Keep `ɓ`, `ɗ`, `ƙ`
-and `₦` as separately labelled known-upstream-fallback rows. Keep one separately
-labelled `ṣ́` row only as a known split-subset fallback; it is not valid Yoruba
+and `₦` as separately labelled known production coverage gaps. Keep one separately
+labelled `ṣ́` row as an invalid-orthography diagnostic; it is not valid Yoruba
 orthography because tone marks sit on vowels and syllabic nasals. A labelled NFD
 `n` + U+0301 diagnostic sits beside NFC `ń` to make the normalization requirement
 observable. Use Chrome Rendered Fonts and cold-cache network requests from a
@@ -292,6 +292,12 @@ Hanken. This split-control failure and local-font pass isolate unicode-range
 splitting as the cause rather than Hanken's available Yoruba glyphs.
 
 Source Serif 4 remains only as the route-local upstream split control for Berean Serif. It is not a production candidate.
+
+**Automated production-browser result, 2026-11-04 — Berean Serif and Hanken.** Chrome Rendered Fonts kept all 18 realistic clusters and the full NFC phrase at every tested 14–32px size entirely in the expected local production face in both theme scopes. Berean uses `BereanSerif-SemiBold`; Hanken uses `HankenGrotesk`. The NFD `n` + U+0301 diagnostic and invalid-orthography `ṣ́` row also remain in their respective local files. The labelled coverage gaps `ɓ`, `ɗ`, `ƙ` and `₦` fall back to Times New Roman for Berean and Arial for Hanken.
+
+The 44px and 70px production samples have no visible mark clipping at line-height 1.05. A separate two-line capital stress fixture compares 1.05 and 0.98 at both sizes: the tighter setting crowds adjacent stacked marks, so production retains 1.05. Canvas ink bounds exceeding a line box do not, by themselves, establish clipping; the verdict uses the rendered samples. The 24px scripture sample remains selected over 22px for its more comfortable reading texture. Both quote sizes wrap to two lines in the 360px gate and one line at 768px.
+
+The six-screen automated matrix passes 360px, 768px, 320px reflow and CSS 200% resize in both themes after the preview-width fix. The reader remains Hanken 18px/1.65 with a 530px measure, approximately 65 characters per line for the sampled prose. Delaying font responses by one second on four cold Home loads produced a maximum observed layout-shift sum of 0.000061. See `docs/typography-audit-2026-11-04.md` for scope and exceptions. These are automated observations, not the developer's signed-in browser/RLS sign-off required by `AGENTS.md`.
 
 ### 2.2 Roles and scale (rem, root 16px)
 
@@ -354,10 +360,10 @@ and Brotli are not application dependencies.
 | Berean Serif static 600 | production | 1 | 41,776 | 40.8 |
 | Hanken combined variable | production | 1 | 48,268 | 47.1 |
 | `/home` production total | production | 2 | 90,044 | 87.9 |
-| Google control fonts beyond production | `/dev/cloth` only | measure in final production audit | measure | measure |
-| `/dev/cloth` total | admin preview | measure in final production audit | measure | measure |
+| Google control fonts beyond production | `/dev/cloth` only | 7 | 206,620 | 201.8 |
+| `/dev/cloth` total | admin preview | 9 | 296,664 | 289.7 |
 
-The previous Fraunces build measured 85,428 transferred bytes for `/home`; that historical result is not the Berean result. Record final cache-disabled `content-length`, `encodedBodySize`, `decodedBodySize` and `transferSize` values here after the production Playwright audit. Route manifests may list fewer preload candidates than rendered control rows ultimately request.
+A cache-disabled production `/home` load requests exactly the two local app fonts once each, with no service worker: Berean Serif reports `content-length: 41776`, `encodedBodySize: 41776`, `decodedBodySize: 41776` and `transferSize: 42076`; Hanken reports `content-length: 48268`, `encodedBodySize: 48268`, `decodedBodySize: 48268` and `transferSize: 48568`. The encoded body total is 90,044 bytes and the browser-reported `transferSize` total is 90,644 bytes. No Fraunces, Google, Source Serif or control-font request appears on `/home`. The same cold-cache audit reports 296,664 encoded bytes and 299,364 transferred bytes for the nine `/dev/cloth` fonts; every response is HTTP 200. Home exposes exactly two unique font preloads. Re-enabling the cache and client-navigating Home → Classes → Home makes no font request and no full-document navigation. Route manifests may list fewer preload candidates than rendered control rows ultimately request.
 
 ---
 
@@ -828,6 +834,8 @@ both themes side by side with:
 6. visible total-element counts for the heaviest samples;
 7. production Berean Serif and Hanken, Google-split Hanken and upstream Source Serif 4 controls;
 8. real-name greeting samples rendered wholly in Berean Serif, plus 22px/24px scripture and 44px/70px clipping checks.
+
+The `.cloth-scope` grid items allow shrinking with `min-inline-size: 0`. Fixed-size art in `.cloth-grid` keeps its explicit audit dimensions inside a bounded horizontal scroller when wider than the available space; it never expands the page. At 320px and 360px, Chrome's native focusable scrollers show a focus ring and respond to arrow keys. Keyboard verification waits for native smooth scrolling to settle before measuring visibility.
 
 Caption plates are unblurred faux material. Both caption lines use primary text.
 The production browser rasterized all six grounds and six motif inks in both

@@ -72,7 +72,7 @@ It is designed to feel less like a social feed and more like a quiet reading roo
 | Utilities | `class-variance-authority`, `clsx`, `tailwind-merge` |
 | Backend | Supabase — Postgres, Auth, Row Level Security |
 | Supabase clients | `@supabase/ssr`, `@supabase/supabase-js` |
-| Fonts | Fraunces (serif), Inter (sans), JetBrains Mono (mono) |
+| Fonts | Berean Serif (local display), Hanken Grotesk (local interface/body) |
 
 ---
 
@@ -336,7 +336,7 @@ This is an evolving app. Known limitations, in the interest of honesty:
 
 ## License
 
-No `LICENSE` file is present in this repository, and `package.json` is marked `"private": true`. Unless a license is added, treat this as **all rights reserved**. If you intend to open-source it, add a `LICENSE` file and reference it here.
+No `LICENSE` file is present in this repository, and `package.json` is marked `"private": true`. Unless a license is added, treat the application code as **all rights reserved**. Bundled font software under `app/fonts/hanken` and `app/fonts/berean-serif` is distributed separately under the adjacent SIL Open Font License 1.1 notices; Berean Serif is a renamed Modified Version of Source Serif 4 because “Source” is a Reserved Font Name. If you intend to open-source the application, add a `LICENSE` file and reference it here.
 
 ---
 

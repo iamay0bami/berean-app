@@ -10,7 +10,7 @@ const bereanSerif = localFont({
   style: 'normal',
   display: 'swap',
   preload: true,
-  fallback: ['Times New Roman'],
+  fallback: ['Times New Roman', 'serif'],
   adjustFontFallback: 'Times New Roman',
 })
 const hanken = localFont({

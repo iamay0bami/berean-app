@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { Hanken_Grotesk, Noto_Serif, Source_Serif_4 } from 'next/font/google'
+import { Hanken_Grotesk, Source_Serif_4 } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import {
   CLOTH_GROUNDS,
@@ -24,12 +24,6 @@ const hankenSplit = Hanken_Grotesk({
 const sourceSerif = Source_Serif_4({
   subsets: ['latin', 'latin-ext', 'vietnamese'],
   variable: '--font-source-serif',
-  display: 'swap',
-})
-
-const notoSerif = Noto_Serif({
-  subsets: ['latin', 'latin-ext', 'vietnamese'],
-  variable: '--font-noto-serif',
   display: 'swap',
 })
 
@@ -60,13 +54,16 @@ const TYPE_SIZES = [
   { label: '14px', className: 'cloth-type-sample--14' },
   { label: '16px', className: 'cloth-type-sample--16' },
   { label: '19px', className: 'cloth-type-sample--19' },
+  { label: '22px', className: 'cloth-type-sample--22' },
+  { label: '24px', className: 'cloth-type-sample--24' },
+  { label: '30px', className: 'cloth-type-sample--30' },
+  { label: '32px', className: 'cloth-type-sample--32' },
 ] as const
 const TYPE_FAMILIES = [
-  { label: 'Fraunces · production fixed English', className: 'cloth-type-family--fraunces' },
-  { label: 'Hanken Grotesk · production local live text', className: 'cloth-type-family--hanken' },
-  { label: 'Hanken Grotesk · Google split control', className: 'cloth-type-family--hanken-split' },
-  { label: 'Source Serif 4 · preview control', className: 'cloth-type-family--source' },
-  { label: 'Noto Serif · preview control', className: 'cloth-type-family--noto' },
+  { label: 'Berean Serif · production local display', className: 'cloth-type-family--berean' },
+  { label: 'Hanken Grotesk · production local body/interface', className: 'cloth-type-family--hanken' },
+  { label: 'Hanken Grotesk · Google split negative control', className: 'cloth-type-family--hanken-split' },
+  { label: 'Source Serif 4 · upstream Google-split control', className: 'cloth-type-family--source' },
 ] as const
 
 function Frame({ width, height, round = false, children }: { width: number; height: number; round?: boolean; children: ReactNode }) {
@@ -111,7 +108,7 @@ export default async function ClothPreviewPage() {
   ])]
 
   return (
-    <div className={`page-wrap cloth-page ${hankenSplit.variable} ${sourceSerif.variable} ${notoSerif.variable}`}>
+    <div className={`page-wrap cloth-page ${hankenSplit.variable} ${sourceSerif.variable}`}>
       <Header />
       <main>
         <h1 className="cloth-title">Cover cloth</h1>
@@ -153,12 +150,12 @@ export default async function ClothPreviewPage() {
                     </div>
                     {KNOWN_FONT_FALLBACKS.map(({ cluster, codePoint }) => (
                       <div className="cloth-type-row cloth-type-row--known-font-fallback" key={cluster}>
-                        <span className="cloth-type-size">known upstream fallback · {codePoint}</span>
+                        <span className="cloth-type-size">known production coverage gap · {codePoint}</span>
                         <p className="cloth-type-sample cloth-type-sample--16" data-cluster={cluster} data-cluster-kind="known-fallback">{cluster}</p>
                       </div>
                     ))}
                     <div className="cloth-type-row cloth-type-row--known-fallback">
-                      <span className="cloth-type-size">known split-subset fallback, not valid orthography</span>
+                      <span className="cloth-type-size">invalid-orthography diagnostic · ṣ + U+0301</span>
                       <p className="cloth-type-sample cloth-type-sample--16" data-cluster={KNOWN_SPLIT_SUBSET_FALLBACK} data-cluster-kind="invalid-orthography">{KNOWN_SPLIT_SUBSET_FALLBACK}</p>
                     </div>
                   </section>
@@ -176,6 +173,26 @@ export default async function ClothPreviewPage() {
                   )))}
                 </div>
               ) : <p className="cloth-note">No readable real profile or leader names are available for this admin session.</p>}
+
+              <h3 className="cloth-subheading">Production display and scripture checks</h3>
+              <div className="cloth-type-family cloth-type-family--berean" lang="yo">
+                <div className="cloth-type-row">
+                  <span className="cloth-type-size">44px · 1.05</span>
+                  <p className="cloth-type-sample cloth-type-sample--44">Ẹ̀mí Ọlọ́run ń kọ́ wa</p>
+                </div>
+                <div className="cloth-type-row">
+                  <span className="cloth-type-size">70px · 1.05</span>
+                  <p className="cloth-type-sample cloth-type-sample--70">Ẹ̀mí Ọlọ́run</p>
+                </div>
+                <div className="cloth-type-row">
+                  <span className="cloth-type-size">22px scripture · 600</span>
+                  <p className="cloth-type-sample cloth-type-sample--22">Ọ̀rọ̀ rẹ jẹ́ fìtílà fún ẹsẹ̀ mi.</p>
+                </div>
+                <div className="cloth-type-row">
+                  <span className="cloth-type-size">24px scripture · 600</span>
+                  <p className="cloth-type-sample cloth-type-sample--24">Ọ̀rọ̀ rẹ jẹ́ fìtílà fún ẹsẹ̀ mi.</p>
+                </div>
+              </div>
 
               {COVER_SIZES.map((size, sizeIndex) => (
                 <div key={size.id}>
