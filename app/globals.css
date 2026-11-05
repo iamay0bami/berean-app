@@ -576,6 +576,54 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .cloth-caption { position: absolute; inset-inline: var(--space-2); inset-block-end: var(--space-2); display: grid; gap: var(--space-1); min-inline-size: 0; padding: var(--space-2); border: 1px solid var(--cloth-outline); border-radius: var(--radius-sm); background: var(--cloth-caption-fill); color: var(--text); font-family: var(--font-sans); box-shadow: var(--shadow-plate); }
 .cloth-caption__title { margin: 0; font: 600 var(--text-ui)/1.25 var(--font-sans); overflow-wrap: break-word; }
 .cloth-caption__leaders { margin: 0; font: 500 var(--text-micro)/1.3 var(--font-sans); overflow-wrap: break-word; }
+
+/* Classes index — the existing 720px page-wrap, with 24px gutters at every
+   width. Only the shelf bleeds; other page-wrap users keep their own gutters. */
+.classes-page { padding-inline: var(--space-5); }
+.classes-page__title { margin-block-start: var(--space-6); font-family: var(--font-serif); font-weight: 600; font-style: normal; font-size: var(--text-display); line-height: 1.05; letter-spacing: -.02em; font-synthesis-weight: none; font-synthesis-style: none; }
+.classes-section { padding-block-start: var(--space-6); }
+.classes-section + .classes-section { padding-block-start: var(--space-7); }
+.classes-section .section-heading { gap: var(--space-3); margin-block-end: var(--space-4); }
+.classes-section .card__title { font-size: var(--text-heading); }
+.classes-page__note, .classes-page__excerpt { color: var(--text-muted); font-family: var(--font-interface), sans-serif; font-size: var(--text-body); line-height: 1.55; overflow-wrap: anywhere; }
+.classes-page__note { max-inline-size: var(--measure); }
+.classes-page__excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.classes-page .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+.class-shelf { display: flex; align-items: start; gap: var(--space-3); list-style: none; margin-block: 0; margin-inline: calc(-1 * var(--space-5)); padding: var(--space-1) var(--space-5) var(--space-2); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: var(--space-5); }
+.class-shelf__item { flex: 0 0 var(--cloth-cover-min); min-inline-size: 0; scroll-snap-align: start; }
+.class-shelf__link { display: grid; align-items: end; inline-size: 100%; min-block-size: min-content; aspect-ratio: 3 / 4; padding: var(--space-2); color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; scroll-margin-inline: var(--space-1); }
+.class-shelf__art { position: absolute; inset: 0; border: 0; border-radius: inherit; }
+.class-shelf__link:focus-visible, .classes-page .row:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.cloth-caption--class { position: relative; inset: auto; background: var(--glass-solid); background: var(--cloth-caption-fill); }
+.cloth-caption--class .cloth-caption__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-family: var(--font-serif); font-weight: 600; font-style: normal; font-size: var(--text-body); line-height: 1.3; letter-spacing: -.01em; font-synthesis-weight: none; font-synthesis-style: none; text-wrap: pretty; }
+.cloth-caption--class .cloth-caption__leaders { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--text); font-family: var(--font-interface), sans-serif; font-weight: 500; font-size: var(--text-ui); line-height: 1.45; }
+.class-row-list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.classes-page .row--plate { gap: var(--space-3); padding: var(--space-4); background: var(--bg-raised); }
+.class-row__thumb { flex: 0 0 var(--cloth-thumb); inline-size: var(--cloth-thumb); block-size: var(--cloth-thumb); }
+.classes-page .row__title { margin: 0; font-style: normal; overflow-wrap: anywhere; }
+.classes-page .row__meta { font-family: var(--font-interface), sans-serif; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.classes-page .row--plate .row__title, .classes-page .row--plate .row__meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.class-row-list--lessons { gap: 0; border-block-start: var(--border-hairline); }
+.classes-page .folio { line-height: 1.05; font-style: normal; font-synthesis-style: none; }
+@media (hover: hover) { .classes-page .row--plate:hover { background: var(--bg-sunken); } }
+.classes-page .row--plate:active { background: var(--bg-sunken); }
+@media (min-width: 360px) { .class-shelf__item { flex-basis: var(--cloth-cover-mobile); } }
+@media (min-width: 768px) { .class-shelf__item { flex-basis: var(--cloth-cover-tablet); } }
+@media (prefers-reduced-motion: reduce) { .class-shelf { scroll-snap-type: none; } }
+@media (prefers-reduced-transparency: reduce) { .cloth-caption--class { background: var(--glass-solid); } }
+
+/* Static route-local loading geometry. No shimmer, fake links or counts. */
+.classes-skeleton .skeleton-block { display: block; background: var(--bg-sunken); border-radius: var(--radius-xs); }
+.classes-skeleton__title { inline-size: 54%; block-size: var(--text-display); }
+.classes-skeleton__heading { inline-size: 46%; block-size: var(--text-heading); margin-block-end: var(--space-4); }
+.classes-skeleton__cover { inline-size: 100%; aspect-ratio: 3 / 4; }
+.classes-skeleton__row { min-block-size: calc(var(--cloth-thumb) + 2 * var(--space-4)); }
+.classes-skeleton__copy { display: grid; gap: var(--space-2); }
+.classes-skeleton__line { inline-size: 80%; block-size: var(--space-4); }
+.classes-skeleton__line--short { inline-size: 54%; block-size: var(--space-3); }
+.classes-skeleton .classes-skeleton__cover { border-radius: var(--radius-lg); }
+.classes-skeleton .classes-skeleton__thumb { border-radius: var(--radius-md); }
+.classes-skeleton .classes-skeleton__folio { border: 0; }
 .cloth-node-list { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 .cloth-node-item { display: grid; gap: var(--space-1); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-raised); }
 .cloth-node-count { color: var(--text); font: 600 var(--text-ui)/1.3 var(--font-sans); font-variant-numeric: tabular-nums; }
