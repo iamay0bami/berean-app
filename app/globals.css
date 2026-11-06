@@ -445,7 +445,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .class-detail__leaders-title, .class-detail__tools-label { color: var(--text); font-family: var(--font-interface), sans-serif; font-weight: 600; font-size: var(--text-ui); line-height: 1.45; letter-spacing: 0; }
 .class-detail__leader-list { list-style: none; display: grid; gap: var(--space-2); margin: 0; padding: 0; }
 .class-detail__leader { color: var(--text); font-size: var(--text-body); font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
-.class-detail .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+:is(.class-detail, .classes-page) .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
 .class-detail__summary { min-inline-size: 0; display: grid; align-content: start; gap: var(--space-5); padding: var(--space-5); }
 .class-detail__description, .class-detail__note, .class-detail__access-note { font-size: var(--text-body); line-height: 1.55; overflow-wrap: anywhere; }
 .class-detail__description { color: var(--text-muted); white-space: pre-wrap; }
@@ -603,7 +603,6 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .classes-page__note, .classes-page__excerpt { color: var(--text-muted); font-family: var(--font-interface), sans-serif; font-size: var(--text-body); line-height: 1.55; overflow-wrap: anywhere; }
 .classes-page__note { max-inline-size: var(--measure); }
 .classes-page__excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.classes-page .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
 .class-shelf { display: flex; align-items: start; gap: var(--space-3); list-style: none; margin-block: 0; margin-inline: calc(-1 * var(--space-5)); padding: var(--space-1) var(--space-5) var(--space-2); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: var(--space-5); }
 .class-shelf__item { flex: 0 0 var(--cloth-cover-min); min-inline-size: 0; scroll-snap-align: start; }
 .class-shelf__link { display: grid; align-items: end; inline-size: 100%; min-block-size: min-content; aspect-ratio: 3 / 4; padding: var(--space-2); color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; scroll-margin-inline: var(--space-1); }

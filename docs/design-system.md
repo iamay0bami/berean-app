@@ -834,15 +834,23 @@ Other classes → Lessons from your classes**. The title uses `--text-display`,
 Berean Serif 600 normal with 1.05 leading. No intro filler or dead section action
 is rendered.
 
+`ClassShelf` is the shared server-rendered shelf contract. The Classes index passes
+its personal catalog rows, heading id and an id prefix; future screen groups reuse
+that component rather than copying its DOM. It preserves the semantic `ul`/`li`,
+whole-cover links, full accessible leader descriptions and the existing
 `.class-shelf`, `.class-shelf__item`, `.class-shelf__link` and
-`.class-shelf__art` provide native horizontal scrolling and whole-cover links to
-`/class/[id]`. Only the art layer clips. The shelf bleeds to the column edges,
-with 24px starting/ending padding, 12px gaps and page-aligned scroll padding.
-Covers are 126×168 at 320px, 144×192 from 360px and 168×224 from 768px. The measured
-third-cover peek is **20px at 320px and 24px at 360px**. The shelf never becomes
-a grid or an unbounded desktop viewport region. The ul has no separate tab stop;
-Tab reaches each cover and native focus scrolling reveals off-screen links.
-Reduced motion disables snap.
+`.class-shelf__art` classes. Those classes provide native horizontal scrolling and
+whole-cover links to `/class/[id]`. Only the art layer clips. The shelf bleeds to
+the column edges, with 24px starting/ending padding, 12px gaps and page-aligned
+scroll padding. Covers are 126×168 at 320px, 144×192 from 360px and 168×224 from
+768px. The measured third-cover peek is **20px at 320px and 24px at 360px**. The
+shelf never becomes a grid or an unbounded desktop viewport region. The ul has no
+separate tab stop; Tab reaches each cover and native focus scrolling reveals
+off-screen links. Reduced motion disables snap. The borderless-card treatment is
+one specificity-preserving
+`:is(.class-detail, .classes-page) .card--borderless` rule, so Classes index,
+class detail and both route loaders retain identical border, radius and shadow
+values without duplicate declarations.
 
 `.cloth-caption--class` supplies the production roles without changing preview
 captions: `.cloth-caption__title` is Berean 600 normal, `--text-body` / 1.3;
