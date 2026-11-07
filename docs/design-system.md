@@ -1200,12 +1200,76 @@ with no new asset or dependency.
 The existing bottom nav, Sermons, Profile and shared branded loader are unchanged.
 Real `backdrop-filter` remains limited to `.bottom-nav` and `.reading-header`.
 Authoring lesson forms continue to hide nav through the shared route matcher.
-Classes index and detail retain their static, shape-matched skeletons; Home's
-corresponding route loader remains deferred to its separate pass. The admin-only
-`/dev/cloth` route remains the retained cloth/font gate, and removing it still
-requires explicit approval. This Home pass adds one bounded reader and its
-presentation type, but no migration, new RPC, RLS surface, service-key path,
-action, font or image file.
+Classes index, class detail and Home retain static, shape-matched route loaders.
+The Home loader reuses the production Header, gutters, shelf widths, destination
+breakpoint and reflection order without links, controls, cloth SVGs, words,
+figures or animation. `:is(.classes-skeleton, .home-skeleton) .skeleton-block`
+widens the existing static block declaration with the same specificity and values;
+it does not change either Classes loader, while class detail keeps its separate
+`class-detail-skeleton__*` pattern. The admin-only `/dev/cloth` route remains the
+retained cloth/font gate, and removing it still requires explicit approval. This
+Home pass adds one bounded reader and its presentation type, but no migration,
+new RPC, RLS surface, service-key path, action, font or image file.
+
+### 10.2 Home validation boundary — 2026-11-07
+
+All evidence in this section is **synthetic**. The canonical populated fixture used
+real production components with fixed lesson, scripture, class, sermon, discussion,
+question, thought and prayer props; a separate synthetic fixture removed the
+lesson-dependent highlights and prayer; another forced destination hover and press.
+The static loader fixture rendered the production `app/home/loading.tsx`. Checks and
+captures covered 320px light plus 360px light and dark. The 360px destination labels
+were also checked at 200% CSS text resize: both wrapped only when their 128px and
+171.66px natural widths exceeded the 96px available width, and document width stayed
+360px. Native browser page zoom was not tested.
+
+Pass 2 raster checks sampled exact foreground and painted card pixels from PNGs at
+DPR 1 rather than relying on computed colors alone:
+
+| Pair | Light | Dark | Requirement |
+| --- | ---: | ---: | --- |
+| Verse reference / raised card | 5.93:1 | 6.11:1 | 4.5:1 ✓ |
+| `Open lesson` / raised card | 5.63:1 | 8.19:1 | 4.5:1 ✓ |
+| `Read lesson` / raised card | 5.63:1 | 8.19:1 | 4.5:1 ✓ |
+| Raised tile / sunken panel | 1.22:1 | 1.13:1 | Nested-surface distinction; no WCAG text claim |
+| Press edge / raised tile | 3.81:1 | — | 3:1 ✓ in the sampled light state |
+
+The corresponding fixes put the verse in a raised borderless card with a tokenized
+3px inline-start rule; omitted absent verse, question, thought and prayer modules;
+kept destination cards raised through hover and press; reduced destination padding
+and header gap; changed label wrapping to `break-word`; aligned both panel bottoms
+through a `1fr` panel row; and restored Latest lesson to the same raised surface as
+the verse. Computed Latest/verse backgrounds matched at `rgb(255, 255, 255)` in
+light and `rgb(29, 36, 56)` in dark. At 360px both destination cards ended at
+1346.64px and both panels at 1333.64px.
+
+The synthetic Home loader has one `Loading home…` status outside one hidden inert
+geometry wrapper, with `aria-busy="true"` on `main`. The wrapper contains zero text,
+links, buttons or SVGs. At 360px its shelf measured 360px locally with 504px of
+scroll content; at 320px it measured 320px with 450px of scroll content. Destination
+tiles were two 150px columns at 360px and two stacked 272px cards at 320px. The
+loader document was 1960px tall against 2208px for the canonical populated fixture,
+a delta of -248px (the loader is 88.8% of populated height).
+
+Rendered route-root UTF-8 HTML from the same synthetic development fixture measured:
+
+| Route-local root | Bytes | Loader delta |
+| --- | ---: | ---: |
+| Retired branded Home loader | 409 | +5172 |
+| Static Home skeleton | 5581 | — |
+| Canonical populated Home | 9444 | -3863 |
+
+These are serialized route-root `outerHTML` bytes, not a production transfer-size
+claim and not the Next.js document, hydration scripts or compression. Before/after
+browser signatures for the Classes loader were field-for-field equal across shared
+block display, fill and radius plus title, cover, row and shelf geometry. The same
+comparison passed for class-detail header blocks, art block, lines, folio and hero;
+its CSS selector was not widened.
+
+Live signed-in member, leader and admin behavior under current RLS remains
+unverified, including no-class and no-lesson accounts. Safari, older WebViews,
+native page zoom and developer signed-in sign-off also remain unverified. The
+synthetic fixtures, raster checks, typecheck and build do not close those gates.
 
 ---
 
