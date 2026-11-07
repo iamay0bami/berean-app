@@ -1,35 +1,180 @@
-import { ArrowLeft, ChevronRight, Feather, MessageCircle, NotebookPen } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import type { Lesson, PrayerPoint, Sermon } from '@/lib/types'
-import type { ViewerRole } from '@/lib/mock-data'
-import type { Greeting } from '@/lib/greeting'
-import { EmptyState } from '@/components/empty-state'
-import { Header, Meta } from '@/components/shared'
+import ClassShelf from '@/components/class-shelf'
+import { CoverCloth } from '@/components/cover-cloth'
+import { Header } from '@/components/shared'
+import type { ClassCatalogItem, HomeLessonHighlights, LessonSummary, PrayerPoint, Sermon } from '@/lib/types'
 
-const emptyCopy: Record<ViewerRole, Record<'all' | 'lesson' | 'sermon', { title: string; body: string }>> = {
-  leader: {
-    all: { title: 'Nothing is published yet', body: 'Once a lesson or sermon is published, it will appear here for the community.' },
-    lesson: { title: 'No lesson published yet', body: 'Publish a lesson and it will appear here for everyone.' },
-    sermon: { title: 'No sermon published yet', body: "Publish the week's sermon notes and they'll show up here." },
-  },
-  visitor: {
-    all: { title: 'New content is on the way', body: 'There is nothing published yet. Check back soon — a place is set for you.' },
-    lesson: { title: 'No lesson published yet', body: 'When the next lesson is published, it will appear here.' },
-    sermon: { title: 'No sermon notes yet', body: "Sunday notes will appear here once they're shared." },
-  },
-}
+export default function HomeView({
+  lesson,
+  highlights,
+  classes,
+  sermon,
+  discussionPrompt,
+  prayer,
+  firstName,
+  dateLabel,
+}: {
+  lesson?: LessonSummary
+  highlights?: HomeLessonHighlights
+  classes: ClassCatalogItem[]
+  sermon?: Sermon
+  discussionPrompt?: string
+  prayer?: PrayerPoint
+  firstName: string | null
+  dateLabel: string
+}) {
+  const myClasses = classes.filter(item => item.isMine)
+  const shelfItems = myClasses.length ? myClasses : classes
+  const classSectionTitle = myClasses.length ? 'Your classes' : 'Classes at your church'
+  const lessonHref = lesson ? `/classes/${lesson.id}` : undefined
+  const verse = highlights?.quote && highlights.reference
+    ? { quote: highlights.quote, reference: highlights.reference }
+    : undefined
+  const question = lessonHref ? highlights?.question : undefined
+  const thought = lessonHref ? highlights?.thought : undefined
+  const hasReflections = Boolean(question || thought || prayer)
+  const sermonMeta = sermon ? [sermon.date, sermon.speaker].filter(Boolean).join(' · ') : ''
 
-export default function HomeView({ lesson, sermon, prayer, viewerRole, greeting, dateLabel }: { lesson?: Lesson; sermon?: Sermon; prayer?: PrayerPoint; viewerRole: ViewerRole; greeting: Greeting; dateLabel: string }) {
-  const copy = emptyCopy[viewerRole]
-  const allEmpty = !lesson && !sermon
-  return <div className="page-wrap"><Header /><main>
-    <section className="welcome"><Meta>{dateLabel}</Meta><h1>{greeting.before ? <>{greeting.before}<br /></> : null}<em>{greeting.name}</em>{greeting.after ? <><br />{greeting.after}</> : null}</h1><p className="lede">A little room to listen, learn, and live the Word this week.</p></section>
-    {allEmpty ? <EmptyState title={copy.all.title} body={copy.all.body} /> : <>
-      {lesson ? <section className="continue-card paper-card"><div className="card-kicker"><Meta>Latest lesson</Meta></div><div className="lesson-row"><div className="lesson-number">{lesson.number}</div><div className="lesson-info"><h2>{lesson.title}</h2><p>{lesson.duration}</p></div><ChevronRight size={21} /></div><Link className="text-action" href={`/classes/${lesson.id}`}>Open lesson <ArrowLeft size={15} className="rotate-180" /></Link></section>
-        : <EmptyState title={copy.lesson.title} body={copy.lesson.body} />}
-      <section className="section-block"><div className="section-heading"><h2>For your week</h2><Link className="small-link" href="/sermons">See all <ChevronRight size={15} /></Link></div><div className="home-grid">{sermon ? <Link className="feature-tile gold-tile" href={`/sermons/${sermon.id}`}><NotebookPen size={23} /><span><Meta>Sunday notes</Meta><strong>{sermon.title}</strong></span><ArrowLeft className="rotate-180" size={18} /></Link>
-        : <EmptyState className="empty--tile" title={copy.sermon.title} body={copy.sermon.body} />}<Link className="feature-tile sage-tile" href="/discuss"><MessageCircle size={22} /><span><Meta>Community</Meta><strong>What are you<br />carrying today?</strong></span><ArrowLeft className="rotate-180" size={18} /></Link></div></section>
-    </>}
-    {prayer && <section className="section-block prayer-preview"><div className="section-heading"><h2>Prayer corner</h2><Link className="small-link" href="/sermons">View prayers <ChevronRight size={15} /></Link></div><div className="prayer-quote"><Feather size={18} /><p>“{prayer.text}”</p><Meta>— {prayer.name} · {prayer.time}</Meta></div></section>}
-  </main></div>
+  return (
+    <div className="page-wrap home-page">
+      <Header />
+      <main className="home-main">
+        <section className="home-welcome" aria-labelledby="home-title">
+          <p className="home-welcome__date">{dateLabel}</p>
+          <h1 className="home-welcome__title" id="home-title">
+            Welcome back{firstName ? <>, <bdi className="home-welcome__name">{firstName}</bdi></> : null}.
+          </h1>
+        </section>
+
+        <section className="home-section" aria-labelledby="home-latest-title">
+          <div className="section-heading home-section__heading">
+            <h2 className="card__title" id="home-latest-title">Latest lesson</h2>
+          </div>
+          {lesson && lessonHref ? (
+            <Link className="row home-latest card card--borderless" href={lessonHref}>
+              <span className="home-latest__band" aria-hidden="true">
+                <span className="home-latest__band-art"><CoverCloth seed={lesson.id} variant="strip" /></span>
+              </span>
+              <span className="folio">{lesson.number}</span>
+              <span className="row__main">
+                <span className="row__title home-latest__title">{lesson.title}</span>
+                {(lesson.week || lesson.duration) && (
+                  <span className="row__meta">{[lesson.week, lesson.duration].filter(Boolean).join(' · ')}</span>
+                )}
+              </span>
+              <ChevronRight className="row__action" size={20} strokeWidth={1.8} aria-hidden="true" />
+            </Link>
+          ) : (
+            <p className="home-note">A published lesson will appear here when one is available to you.</p>
+          )}
+        </section>
+
+        {verse && (
+          <section className="home-section" aria-labelledby="home-verse-title">
+            <div className="section-heading home-section__heading">
+              <h2 className="card__title" id="home-verse-title">This week’s verse</h2>
+            </div>
+            <blockquote className="home-verse card card--borderless">
+              <p className="reading-deck--scripture home-verse__quote">“{verse.quote}”</p>
+              <cite className="home-verse__reference">— {verse.reference}</cite>
+            </blockquote>
+          </section>
+        )}
+
+        <section className="home-section" aria-labelledby="home-classes-title">
+          <div className="section-heading home-section__heading">
+            <h2 className="card__title" id="home-classes-title">{classSectionTitle}</h2>
+          </div>
+          {shelfItems.length ? (
+            <ClassShelf items={shelfItems} labelledBy="home-classes-title" idPrefix="home-shelf" />
+          ) : (
+            <p className="home-note">Classes will appear here after they’re added.</p>
+          )}
+        </section>
+
+        <section className="home-section" aria-labelledby="home-week-title">
+          <div className="section-heading home-section__heading">
+            <h2 className="card__title" id="home-week-title">For your week</h2>
+          </div>
+          <div className="home-destinations">
+            <Link className="home-destination card card--borderless" href={sermon ? `/sermons/${sermon.id}` : '/sermons'}>
+              <span className="home-destination__top">
+                <span className="home-destination__label">Sermons</span>
+                <ChevronRight className="home-destination__chevron" size={20} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span className="home-destination__panel">
+                {sermon ? (
+                  <>
+                    <span className="home-destination__title">{sermon.title}</span>
+                    {sermonMeta && <span className="home-destination__meta">{sermonMeta}</span>}
+                  </>
+                ) : (
+                  <span className="home-destination__empty">No sermon notes have been published yet.</span>
+                )}
+              </span>
+            </Link>
+
+            <Link className="home-destination card card--borderless" href="/discuss">
+              <span className="home-destination__top">
+                <span className="home-destination__label">Community</span>
+                <ChevronRight className="home-destination__chevron" size={20} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span className="home-destination__panel">
+                {discussionPrompt ? (
+                  <span className="home-destination__prompt">{discussionPrompt}</span>
+                ) : (
+                  <span className="home-destination__empty">No discussion prompt has been published yet.</span>
+                )}
+              </span>
+            </Link>
+          </div>
+        </section>
+
+        {hasReflections && (
+          <div className="home-reflections">
+            {question && lessonHref && (
+              <section className="home-section home-reflections__section" aria-labelledby="home-question-title">
+                <div className="section-heading home-section__heading">
+                  <h2 className="card__title" id="home-question-title">A question to sit with</h2>
+                </div>
+                <Link className="home-reflection-link card card--borderless" href={lessonHref}>
+                  <span className="home-question__text">{question.text}</span>
+                  <span className="home-link-cue">Open lesson <ChevronRight size={18} strokeWidth={1.8} aria-hidden="true" /></span>
+                </Link>
+              </section>
+            )}
+
+            {thought && lessonHref && (
+              <section className="home-section home-reflections__section" aria-labelledby="home-thought-title">
+                <div className="section-heading home-section__heading">
+                  <h2 className="card__title" id="home-thought-title">A thought on this week’s lesson</h2>
+                </div>
+                <Link className="home-reflection-link home-thought card card--borderless" href={lessonHref}>
+                  <span className="home-thought__byline">
+                    <span className="home-thought__author">{thought.name}</span>
+                    <span className="home-thought__time">{thought.timestamp}</span>
+                  </span>
+                  <span className="home-thought__text">{thought.text}</span>
+                  <span className="home-link-cue">Read lesson <ChevronRight size={18} strokeWidth={1.8} aria-hidden="true" /></span>
+                </Link>
+              </section>
+            )}
+
+            {prayer && (
+              <section className="home-section home-reflections__section home-reflections__section--prayer" aria-labelledby="home-prayer-title">
+                <div className="section-heading home-section__heading">
+                  <h2 className="card__title" id="home-prayer-title">Prayer corner</h2>
+                </div>
+                <div className="home-prayer card card--borderless">
+                  <p className="home-prayer__text">“{prayer.text}”</p>
+                  <p className="home-prayer__meta">— {prayer.name} · {prayer.time}</p>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  )
 }

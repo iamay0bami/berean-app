@@ -12,6 +12,18 @@ export interface LessonThought {
   hearts: number
 }
 
+export interface HomeLessonHighlights {
+  quote?: string
+  reference?: string
+  question?: LessonQuestion
+  thought?: {
+    name: string
+    initials: string
+    text: string
+    timestamp: string
+  }
+}
+
 export interface LessonSummary {
   id: string
   classId: string

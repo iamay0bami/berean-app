@@ -17,7 +17,7 @@ wrong, change it here first, then in the code — one edit, in that order.
 >
 > Read §1–§8 as a description of the system as it is. The Classes index and
 > class detail redesign are implemented in §6.9–§6.10; their validation boundary
-> is recorded in §6.11. Home's remaining Batch 3 work is deferred in §10.1.
+> is recorded in §6.11. Home's Batch 3 composition is recorded in §10.1.
 > The lesson composer (`createInsight`), Profile library rows (`Edit profile`,
 > reflections, reading settings), and sermon sub-tabs remain unbuilt until their
 > own change. The retained `CoverCloth` gate is not permission to expand scope.
@@ -1127,7 +1127,7 @@ does.**
 10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections
     built then are the content that would move.
 
-### 10.1 Batch 3 progress — Classes implemented, Home work deferred
+### 10.1 Batch 3 progress — Classes and Home composition implemented
 
 The Classes index and class detail contracts are implemented in §6.9–§6.10,
 with the unclosed validation gates in §6.11. Their approved amendments supersede
@@ -1143,22 +1143,69 @@ header, compact name echo and repeated lesson empty headings.
 - Personal class/lesson data is active explicit memberships plus the separately
   modelled active led class. Existing `getClassLeaders()` supplies every leader;
   do not replace it with direct profile lookups or `member_display()`.
-- Home's remaining shelf and community/prayer composition is still deferred.
-  Its Community tile is intended to use the latest published discussion topic;
-  its prayer tile must not link until Sermons supplies the `#prayer-points`
-  anchor. Do not describe these as shipped or copy Classes changes into Home
-  without its own screen-group task.
-- The existing bottom nav retains its faux-glass moving capsule. Real filters
-  remain only on the nav surface and reading header. Authoring lesson forms
-  retain the shared route matcher that hides nav.
-- Classes and detail have static, shape-matched skeletons. Home's corresponding
-  work is still deferred; shared `components/branded-loading.tsx` is unchanged.
 
-`CoverCloth` now appears on Classes and class detail. Home does not yet render a
-production plate. The admin-only `/dev/cloth` route remains the retained
-cloth/font gate; removing it still requires explicit approval. No new reader,
-migration, RPC, RLS surface, dependency or font/image file was needed for these
-two Classes passes.
+Home is one server-rendered editorial flow: visitor-zone date and one complete
+`Welcome back` greeting; Latest lesson; the lesson's scripture; the shared class
+shelf; Sermons and Community destinations; one review question; one thought on
+the latest lesson; and Prayer corner. Latest lesson alone keeps a quiet note when
+no eligible lesson exists. The verse, question and thought modules are omitted
+when their required lesson data is absent; Prayer is omitted when no published
+prayer exists. Sermons and Community retain truthful empty inset panels, and an
+empty `.home-reflections` wrapper is never rendered.
+
+`app/home/page.tsx` starts the existing independent readers together. The eligible
+`getLatestLesson()` summary feeds `getHomeLessonHighlights(id)`, a bounded,
+user-scoped reader which intentionally mirrors `getLesson()`'s RLS behavior while
+selecting at most one lesson row, the first question by `sort_order`, and the
+newest insight by `created_at`. Its one optional `member_display()` call receives
+exactly that insight's author id. Home never calls `getLesson()`. “Latest lesson”
+means the existing creation-ordered eligible published result; the UI never says
+“just published”.
+
+The Home class section filters `getClassCatalog()` by `isMine`; with no personal
+rows it relabels and renders the complete active catalog as `Classes at your
+church`. The shared `ClassShelf` retains its semantic list, focus order, native
+snap and visible continuation. Sermons uses `getSermons(1)`, Community uses the
+real `getLatestDiscussionPrompt()`, and Prayer uses `getPrayerPoints(1)`. Prayer
+is static selectable text with no chevron, count or link until Sermons exposes a
+real `#prayer-points` destination.
+
+`.home-page` gives the existing 720px `.page-wrap` 24px gutters so only the shelf
+bleeds to the column edges. `.home-welcome`, `.home-section`, `.home-latest`,
+`.home-verse`, `.home-destinations`, `.home-destination`, `.home-reflections`,
+`.home-reflection-link`, `.home-thought` and `.home-prayer` families scope the
+composition. They reuse `.card`, `.card--borderless`, `.row`, `.folio`,
+`.reading-deck--scripture`, the shelf/caption classes and existing tokens. The
+verse is a borderless card with existing spacing tokens and the same tokenized
+3px inline-start accent rule as `.margin-note`; `--accent-rule` exists so the
+shared thickness is not duplicated as a component literal. The single borderless
+rule is `:is(.class-detail, .classes-page, .home-page) .card--borderless`; no
+treatment is duplicated. Destination tiles stack at 320px and use two
+`minmax(0, 1fr)` columns from 360px. Their `--bg-raised` outer surface
+stays raised at rest, hover and press while the inset remains `--bg-sunken`, so
+the two surfaces never merge; hover exposes the existing `--line` hairline and
+press uses `--line-strong`. From 768px question and thought share two columns,
+Prayer remains last and spans the row, and any lone reflection module spans both
+columns; DOM and keyboard order never change, and no text surface has a fixed
+height.
+
+Home's only signature motion reveals the fixed `--cloth-band` strip with
+`clip-path: inset(0 100% 0 0)` to `inset(0)`, mirrored under `[dir='rtl']`, over
+`calc(var(--dur-slow) + var(--dur-fast))` with `var(--ease-out)`. It runs once only
+inside `prefers-reduced-motion: no-preference`; the base strip is fully visible,
+so reduced motion and unsupported clipping lose no content or geometry. No other
+Home entrance animates. The strip uses `CoverCloth`'s production `strip` variant,
+with no new asset or dependency.
+
+The existing bottom nav, Sermons, Profile and shared branded loader are unchanged.
+Real `backdrop-filter` remains limited to `.bottom-nav` and `.reading-header`.
+Authoring lesson forms continue to hide nav through the shared route matcher.
+Classes index and detail retain their static, shape-matched skeletons; Home's
+corresponding route loader remains deferred to its separate pass. The admin-only
+`/dev/cloth` route remains the retained cloth/font gate, and removing it still
+requires explicit approval. This Home pass adds one bounded reader and its
+presentation type, but no migration, new RPC, RLS surface, service-key path,
+action, font or image file.
 
 ---
 
