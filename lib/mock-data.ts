@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassCatalogItem, ClassDetail, ClassLeader, ClassLeaderDisplay, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, Lesson, LessonEdit, LessonEditQuestion, LessonSummary, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassCatalogItem, ClassDetail, ClassLeader, ClassLeaderDisplay, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, HomeLessonHighlights, Lesson, LessonEdit, LessonEditQuestion, LessonSummary, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 import { normalizeHumanText, normalizeHumanTextArray, normalizeOptionalHumanText } from '@/lib/text'
 
@@ -397,6 +397,41 @@ export async function getLatestLesson(): Promise<LessonSummary | undefined> {
     .maybeSingle()
   if (error) throw error
   return data ? mapLessonSummary(data) : undefined
+}
+
+// This intentionally mirrors getLesson's user-scoped RLS filtering while bounding
+// Home to one lesson row, one ordered question and one newest thought.
+export async function getHomeLessonHighlights(lessonId: string): Promise<HomeLessonHighlights> {
+  const { supabase, user } = await getSessionUser()
+  const [lessonResult, questionResult, thoughtResult] = await Promise.all([
+    supabase.from('lessons').select('quote,reference').eq('id', lessonId).maybeSingle(),
+    supabase.from('questions').select('id,text').eq('lesson_id', lessonId).order('sort_order').limit(1).maybeSingle(),
+    supabase.from('insights').select('author_id,text,created_at').eq('lesson_id', lessonId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ])
+  if (lessonResult.error) throw lessonResult.error
+  if (questionResult.error) throw questionResult.error
+  if (thoughtResult.error) throw thoughtResult.error
+  if (!lessonResult.data) return {}
+
+  const quote = normalizeOptionalHumanText(lessonResult.data.quote) ?? undefined
+  const reference = normalizeOptionalHumanText(lessonResult.data.reference) ?? undefined
+  const question = questionResult.data
+    ? { id: questionResult.data.id, text: normalizeHumanText(questionResult.data.text) }
+    : undefined
+
+  let thought: HomeLessonHighlights['thought']
+  if (thoughtResult.data) {
+    const displays = user ? await displaysFor([thoughtResult.data]) : new Map<string, Display>()
+    const author = displays.get(thoughtResult.data.author_id) ?? anonymousDisplay()
+    thought = {
+      name: author.name,
+      initials: author.initials,
+      text: normalizeHumanText(thoughtResult.data.text),
+      timestamp: relativeTime(thoughtResult.data.created_at),
+    }
+  }
+
+  return { quote, reference, question, thought }
 }
 
 export async function getClassDetail(classId: string): Promise<ClassDetail | undefined> {

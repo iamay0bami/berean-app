@@ -17,7 +17,7 @@ wrong, change it here first, then in the code — one edit, in that order.
 >
 > Read §1–§8 as a description of the system as it is. The Classes index and
 > class detail redesign are implemented in §6.9–§6.10; their validation boundary
-> is recorded in §6.11. Home's remaining Batch 3 work is deferred in §10.1.
+> is recorded in §6.11. Home's Batch 3 composition is recorded in §10.1.
 > The lesson composer (`createInsight`), Profile library rows (`Edit profile`,
 > reflections, reading settings), and sermon sub-tabs remain unbuilt until their
 > own change. The retained `CoverCloth` gate is not permission to expand scope.
@@ -834,15 +834,23 @@ Other classes → Lessons from your classes**. The title uses `--text-display`,
 Berean Serif 600 normal with 1.05 leading. No intro filler or dead section action
 is rendered.
 
+`ClassShelf` is the shared server-rendered shelf contract. The Classes index passes
+its personal catalog rows, heading id and an id prefix; future screen groups reuse
+that component rather than copying its DOM. It preserves the semantic `ul`/`li`,
+whole-cover links, full accessible leader descriptions and the existing
 `.class-shelf`, `.class-shelf__item`, `.class-shelf__link` and
-`.class-shelf__art` provide native horizontal scrolling and whole-cover links to
-`/class/[id]`. Only the art layer clips. The shelf bleeds to the column edges,
-with 24px starting/ending padding, 12px gaps and page-aligned scroll padding.
-Covers are 126×168 at 320px, 144×192 from 360px and 168×224 from 768px. The measured
-third-cover peek is **20px at 320px and 24px at 360px**. The shelf never becomes
-a grid or an unbounded desktop viewport region. The ul has no separate tab stop;
-Tab reaches each cover and native focus scrolling reveals off-screen links.
-Reduced motion disables snap.
+`.class-shelf__art` classes. Those classes provide native horizontal scrolling and
+whole-cover links to `/class/[id]`. Only the art layer clips. The shelf bleeds to
+the column edges, with 24px starting/ending padding, 12px gaps and page-aligned
+scroll padding. Covers are 126×168 at 320px, 144×192 from 360px and 168×224 from
+768px. The measured third-cover peek is **20px at 320px and 24px at 360px**. The
+shelf never becomes a grid or an unbounded desktop viewport region. The ul has no
+separate tab stop; Tab reaches each cover and native focus scrolling reveals
+off-screen links. Reduced motion disables snap. The borderless-card treatment is
+one specificity-preserving
+`:is(.class-detail, .classes-page) .card--borderless` rule, so Classes index,
+class detail and both route loaders retain identical border, radius and shadow
+values without duplicate declarations.
 
 `.cloth-caption--class` supplies the production roles without changing preview
 captions: `.cloth-caption__title` is Berean 600 normal, `--text-body` / 1.3;
@@ -1119,7 +1127,7 @@ does.**
 10. **A Library tab or route.** Revisit once 1–3 exist. The Profile sections
     built then are the content that would move.
 
-### 10.1 Batch 3 progress — Classes implemented, Home work deferred
+### 10.1 Batch 3 progress — Classes and Home composition implemented
 
 The Classes index and class detail contracts are implemented in §6.9–§6.10,
 with the unclosed validation gates in §6.11. Their approved amendments supersede
@@ -1135,22 +1143,133 @@ header, compact name echo and repeated lesson empty headings.
 - Personal class/lesson data is active explicit memberships plus the separately
   modelled active led class. Existing `getClassLeaders()` supplies every leader;
   do not replace it with direct profile lookups or `member_display()`.
-- Home's remaining shelf and community/prayer composition is still deferred.
-  Its Community tile is intended to use the latest published discussion topic;
-  its prayer tile must not link until Sermons supplies the `#prayer-points`
-  anchor. Do not describe these as shipped or copy Classes changes into Home
-  without its own screen-group task.
-- The existing bottom nav retains its faux-glass moving capsule. Real filters
-  remain only on the nav surface and reading header. Authoring lesson forms
-  retain the shared route matcher that hides nav.
-- Classes and detail have static, shape-matched skeletons. Home's corresponding
-  work is still deferred; shared `components/branded-loading.tsx` is unchanged.
 
-`CoverCloth` now appears on Classes and class detail. Home does not yet render a
-production plate. The admin-only `/dev/cloth` route remains the retained
-cloth/font gate; removing it still requires explicit approval. No new reader,
-migration, RPC, RLS surface, dependency or font/image file was needed for these
-two Classes passes.
+Home is one server-rendered editorial flow: visitor-zone date and one complete
+`Welcome back` greeting; Latest lesson; the lesson's scripture; the shared class
+shelf; Sermons and Community destinations; one review question; one thought on
+the latest lesson; and Prayer corner. Latest lesson alone keeps a quiet note when
+no eligible lesson exists. The verse, question and thought modules are omitted
+when their required lesson data is absent; Prayer is omitted when no published
+prayer exists. Sermons and Community retain truthful empty inset panels, and an
+empty `.home-reflections` wrapper is never rendered.
+
+`app/home/page.tsx` starts the existing independent readers together. The eligible
+`getLatestLesson()` summary feeds `getHomeLessonHighlights(id)`, a bounded,
+user-scoped reader which intentionally mirrors `getLesson()`'s RLS behavior while
+selecting at most one lesson row, the first question by `sort_order`, and the
+newest insight by `created_at`. Its one optional `member_display()` call receives
+exactly that insight's author id. Home never calls `getLesson()`. “Latest lesson”
+means the existing creation-ordered eligible published result; the UI never says
+“just published”.
+
+The Home class section filters `getClassCatalog()` by `isMine`; with no personal
+rows it relabels and renders the complete active catalog as `Classes at your
+church`. The shared `ClassShelf` retains its semantic list, focus order, native
+snap and visible continuation. Sermons uses `getSermons(1)`, Community uses the
+real `getLatestDiscussionPrompt()`, and Prayer uses `getPrayerPoints(1)`. Prayer
+is static selectable text with no chevron, count or link until Sermons exposes a
+real `#prayer-points` destination.
+
+`.home-page` gives the existing 720px `.page-wrap` 24px gutters so only the shelf
+bleeds to the column edges. `.home-welcome`, `.home-section`, `.home-latest`,
+`.home-verse`, `.home-destinations`, `.home-destination`, `.home-reflections`,
+`.home-reflection-link`, `.home-thought` and `.home-prayer` families scope the
+composition. They reuse `.card`, `.card--borderless`, `.row`, `.folio`,
+`.reading-deck--scripture`, the shelf/caption classes and existing tokens. The
+verse is a borderless card with existing spacing tokens and the same tokenized
+3px inline-start accent rule as `.margin-note`; `--accent-rule` exists so the
+shared thickness is not duplicated as a component literal. The single borderless
+rule is `:is(.class-detail, .classes-page, .home-page) .card--borderless`; no
+treatment is duplicated. Destination tiles stack at 320px and use two
+`minmax(0, 1fr)` columns from 360px. Their `--bg-raised` outer surface
+stays raised at rest, hover and press while the inset remains `--bg-sunken`, so
+the two surfaces never merge; hover exposes the existing `--line` hairline and
+press uses `--line-strong`. From 768px question and thought share two columns,
+Prayer remains last and spans the row, and any lone reflection module spans both
+columns; DOM and keyboard order never change, and no text surface has a fixed
+height.
+
+Home's only signature motion reveals the fixed `--cloth-band` strip with
+`clip-path: inset(0 100% 0 0)` to `inset(0)`, mirrored under `[dir='rtl']`, over
+`calc(var(--dur-slow) + var(--dur-fast))` with `var(--ease-out)`. It runs once only
+inside `prefers-reduced-motion: no-preference`; the base strip is fully visible,
+so reduced motion and unsupported clipping lose no content or geometry. No other
+Home entrance animates. The strip uses `CoverCloth`'s production `strip` variant,
+with no new asset or dependency.
+
+The existing bottom nav, Sermons, Profile and shared branded loader are unchanged.
+Real `backdrop-filter` remains limited to `.bottom-nav` and `.reading-header`.
+Authoring lesson forms continue to hide nav through the shared route matcher.
+Classes index, class detail and Home retain static, shape-matched route loaders.
+The Home loader reuses the production Header, gutters, shelf widths, destination
+breakpoint and reflection order without links, controls, cloth SVGs, words,
+figures or animation. `:is(.classes-skeleton, .home-skeleton) .skeleton-block`
+widens the existing static block declaration with the same specificity and values;
+it does not change either Classes loader, while class detail keeps its separate
+`class-detail-skeleton__*` pattern. The admin-only `/dev/cloth` route remains the
+retained cloth/font gate, and removing it still requires explicit approval. This
+Home pass adds one bounded reader and its presentation type, but no migration,
+new RPC, RLS surface, service-key path, action, font or image file.
+
+### 10.2 Home validation boundary — 2026-11-07
+
+All evidence in this section is **synthetic**. The canonical populated fixture used
+real production components with fixed lesson, scripture, class, sermon, discussion,
+question, thought and prayer props; a separate synthetic fixture removed the
+lesson-dependent highlights and prayer; another forced destination hover and press.
+The static loader fixture rendered the production `app/home/loading.tsx`. Checks and
+captures covered 320px light plus 360px light and dark. The 360px destination labels
+were also checked at 200% CSS text resize: both wrapped only when their 128px and
+171.66px natural widths exceeded the 96px available width, and document width stayed
+360px. Native browser page zoom was not tested.
+
+Pass 2 raster checks sampled exact foreground and painted card pixels from PNGs at
+DPR 1 rather than relying on computed colors alone:
+
+| Pair | Light | Dark | Requirement |
+| --- | ---: | ---: | --- |
+| Verse reference / raised card | 5.93:1 | 6.11:1 | 4.5:1 ✓ |
+| `Open lesson` / raised card | 5.63:1 | 8.19:1 | 4.5:1 ✓ |
+| `Read lesson` / raised card | 5.63:1 | 8.19:1 | 4.5:1 ✓ |
+| Raised tile / sunken panel | 1.22:1 | 1.13:1 | Nested-surface distinction; no WCAG text claim |
+| Press edge / raised tile | 3.81:1 | — | 3:1 ✓ in the sampled light state |
+
+The corresponding fixes put the verse in a raised borderless card with a tokenized
+3px inline-start rule; omitted absent verse, question, thought and prayer modules;
+kept destination cards raised through hover and press; reduced destination padding
+and header gap; changed label wrapping to `break-word`; aligned both panel bottoms
+through a `1fr` panel row; and restored Latest lesson to the same raised surface as
+the verse. Computed Latest/verse backgrounds matched at `rgb(255, 255, 255)` in
+light and `rgb(29, 36, 56)` in dark. At 360px both destination cards ended at
+1346.64px and both panels at 1333.64px.
+
+The synthetic Home loader has one `Loading home…` status outside one hidden inert
+geometry wrapper, with `aria-busy="true"` on `main`. The wrapper contains zero text,
+links, buttons or SVGs. At 360px its shelf measured 360px locally with 504px of
+scroll content; at 320px it measured 320px with 450px of scroll content. Destination
+tiles were two 150px columns at 360px and two stacked 272px cards at 320px. The
+loader document was 1960px tall against 2208px for the canonical populated fixture,
+a delta of -248px (the loader is 88.8% of populated height).
+
+Rendered route-root UTF-8 HTML from the same synthetic development fixture measured:
+
+| Route-local root | Bytes | Loader delta |
+| --- | ---: | ---: |
+| Retired branded Home loader | 409 | +5172 |
+| Static Home skeleton | 5581 | — |
+| Canonical populated Home | 9444 | -3863 |
+
+These are serialized route-root `outerHTML` bytes, not a production transfer-size
+claim and not the Next.js document, hydration scripts or compression. Before/after
+browser signatures for the Classes loader were field-for-field equal across shared
+block display, fill and radius plus title, cover, row and shelf geometry. The same
+comparison passed for class-detail header blocks, art block, lines, folio and hero;
+its CSS selector was not widened.
+
+Live signed-in member, leader and admin behavior under current RLS remains
+unverified, including no-class and no-lesson accounts. Safari, older WebViews,
+native page zoom and developer signed-in sign-off also remain unverified. The
+synthetic fixtures, raster checks, typecheck and build do not close those gates.
 
 ---
 

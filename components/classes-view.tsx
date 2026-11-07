@@ -1,17 +1,10 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import type { AppRole, ClassCatalogItem, LessonSummary } from '@/lib/types'
+import ClassShelf, { fullLeaderSummary } from '@/components/class-shelf'
 import { CoverCloth } from '@/components/cover-cloth'
 import { EmptyState } from '@/components/empty-state'
 import { Header } from '@/components/shared'
-
-const leaderList = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' })
-
-function fullLeaderSummary(item: ClassCatalogItem) {
-  return item.leaders.length
-    ? `Led by ${leaderList.format(item.leaders.map(leader => leader.name))}`
-    : item.leaderSummary
-}
 
 export default function ClassesView({ lessons, myClasses, otherClasses, role }: {
   lessons: LessonSummary[]
@@ -42,25 +35,7 @@ export default function ClassesView({ lessons, myClasses, otherClasses, role }: 
                 <h2 className="card__title" id="your-classes-title">Your classes</h2>
               </div>
               {myClasses.length ? (
-                <ul className="class-shelf" aria-labelledby="your-classes-title">
-                  {myClasses.map(item => (
-                    <li className="class-shelf__item" key={item.id}>
-                      <Link
-                        className="cloth-cover card card--plate card--borderless class-shelf__link"
-                        href={`/class/${item.id}`}
-                        aria-labelledby={`shelf-title-${item.id}`}
-                        aria-describedby={`shelf-leaders-${item.id}`}
-                      >
-                        <div className="cloth-frame class-shelf__art"><CoverCloth seed={item.id} variant="cover" /></div>
-                        <div className="cloth-caption cloth-caption--class">
-                          <h3 className="cloth-caption__title" id={`shelf-title-${item.id}`}>{item.name}</h3>
-                          <p className="cloth-caption__leaders" aria-hidden="true">{item.leaderSummary}</p>
-                        </div>
-                        <span className="sr-only" id={`shelf-leaders-${item.id}`}>{fullLeaderSummary(item)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <ClassShelf items={myClasses} labelledBy="your-classes-title" idPrefix="shelf" />
               ) : (
                 <p className="classes-page__note">{role === 'admin'
                   ? 'You’re not in any classes yet. Classes you belong to will appear here.'

@@ -151,6 +151,10 @@
   ` · ` and omits absent parts; excerpts clamp to two lines. Numbered rows
   use `.row` plus a `.folio` child, not an undefined `.row--folio` modifier.
   Both route loaders are static, with one status outside inert geometry.
+- Home says `Latest lesson`, never `just published`; it never calls
+  `getLesson()`. `getHomeLessonHighlights()` bounds one question and thought.
+  Home shows no counts, omits empty lesson-dependent modules, and keeps Prayer
+  unlinked until Sermons has `#prayer-points`.
 - Honest UI: never ship a control that does nothing, and never show a
   hard-coded figure as if it were data. Wire it or remove it.
 - Reuse existing component classes before adding new ones. One name per
@@ -185,3 +189,13 @@
   clean build/typecheck missed entirely.
 - UI changes are checked at 360px and 768px, in light and dark, with
   keyboard focus visible.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
