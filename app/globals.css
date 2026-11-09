@@ -101,7 +101,7 @@
 
   /* Chrome */
   --nav-base-h: 64px;
-  --nav-h: calc(var(--nav-base-h) + env(safe-area-inset-bottom));
+  --nav-h: calc(var(--nav-base-h) + var(--space-4) + env(safe-area-inset-bottom, 0px));
   --nav-max: 560px;
   --nav-pad-block: 9px;
   --nav-press-scale: 1.025;
@@ -243,7 +243,7 @@
 
 @theme inline { --color-background: var(--background); --color-foreground: var(--foreground); --font-sans: var(--font-interface), sans-serif; --color-border: var(--line); --color-primary: var(--ink); --color-primary-foreground: var(--paper); }
 * { box-sizing: border-box; border-color: var(--line); }
-html { background: var(--background); scroll-behavior: smooth; scroll-padding-block-start: 76px; }
+html { background: var(--background); scroll-behavior: smooth; scroll-padding-block: 76px calc(var(--nav-h) + var(--space-5)); }
 /* One frame of transition suppression while the theme repaints. ThemeToggle
    removes the class on the second rAF, after the new colours have painted. */
 .theme-switching, .theme-switching * { transition: none !important; }
@@ -265,22 +265,27 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .bottom-nav {
   position: fixed;
   z-index: 4;
-  inset-block-end: 0;
-  inset-inline: 0;
-  inline-size: 100%;
-  min-block-size: var(--nav-h);
-  padding: var(--nav-pad-block) var(--space-2) calc(var(--nav-pad-block) + env(safe-area-inset-bottom));
+  inset-block-end: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  inset-inline-start: 50%;
+  inset-inline-end: auto;
+  inline-size: min(calc(100% - 2 * var(--space-3)), var(--nav-max));
+  min-block-size: var(--nav-base-h);
+  padding: var(--nav-pad-block) var(--space-2);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: start;
   isolation: isolate;
   background: var(--glass-solid);
-  border-block-start: var(--glass-border);
+  border: var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glass-shadow);
+  transform: translateX(-50%);
 }
 .bottom-nav__link {
   position: relative;
   z-index: 1;
-  min-block-size: 44px;
+  min-inline-size: var(--touch-target);
+  min-block-size: var(--touch-target);
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -291,6 +296,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
   color: var(--text-muted);
   font: 600 var(--text-micro)/1.2 var(--font-sans);
   text-decoration: none;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
@@ -320,16 +326,8 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 @media (min-width: 760px) { .auth-card { padding: 32px 40px; font-size: 16px; } }
 @media (min-width: 768px) {
   .bottom-nav {
-    inset-block-end: calc(var(--space-4) + env(safe-area-inset-bottom));
-    inset-inline-start: 50%;
-    inset-inline-end: auto;
+    inset-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
     inline-size: min(calc(100% - var(--space-6)), var(--nav-max));
-    min-block-size: var(--nav-base-h);
-    padding-block-end: var(--nav-pad-block);
-    border: var(--glass-border);
-    border-radius: var(--radius-pill);
-    box-shadow: var(--glass-shadow);
-    transform: translateX(-50%);
   }
 }
 
