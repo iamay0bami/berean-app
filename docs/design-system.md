@@ -557,9 +557,9 @@ Mobile first. Verify at **360px, 768px and desktop**.
 | Element | Spec |
 | --- | --- |
 | `.page-wrap` | `max-width: 720px`, centred, including its gutters. Legacy screens use 20px below 760px; Classes index/detail scope their gutters to `var(--space-5)` (24px) at every width. |
-| Content bottom padding | `calc(var(--nav-h) + var(--space-5))` — from a token, not the current hard-coded `88px` |
-| `--nav-h` | `calc(64px + env(safe-area-inset-bottom))` |
-| `scroll-padding-block-start` | the sticky header's height, so an anchored target or a focused field never lands under it |
+| Content bottom padding | `.app-shell` uses `calc(var(--nav-h) + var(--space-5))`; `.app-shell--nav-hidden` resets it to zero for author lesson forms. |
+| `--nav-h` | `calc(var(--nav-base-h) + var(--space-4) + env(safe-area-inset-bottom, 0px))` — the 64px pill plus the largest 16px lift and safe area, so one token clears every viewport. |
+| `scroll-padding` | 76px at the block start and `calc(var(--nav-h) + var(--space-5))` at the block end, so anchored or focused content stays clear of sticky/fixed chrome. |
 | Touch targets | `--touch-target: 44px`; targets never render smaller |
 | Horizontal scroll | Never |
 
@@ -568,24 +568,30 @@ Mobile first. Verify at **360px, 768px and desktop**.
 ### 5.2 Bottom navigation
 
 Five destinations, labels unchanged — the routes exist and the words are the
-users' words. Mobile is edge-to-edge at 64px plus the bottom safe area, with only
-a block-start edge border and no outer shadow. From 768px the nav becomes a
-centred floating pill, no wider than 560px and 16px above the safe area, with a
-full border and the theme's glass shadow.
+users' words. The nav is a centred floating pill at every width, with the same
+faux-glass capsule and one real filtered nav surface. Below 768px it sits
+`var(--space-3)` from both inline edges and
+`calc(var(--space-3) + env(safe-area-inset-bottom, 0px))` above the bottom. From
+768px it keeps the 560px maximum, uses the existing 32px total inline inset and
+lifts to `var(--space-4)` above the safe area. Every size has the full glass
+border, pill radius and theme glass shadow; the opaque fallback and
+reduced-transparency override remain mandatory.
 
 - **One size, one stroke.** 22px at `strokeWidth={1.7}` inactive → `{2}` plus
   `fill="currentColor"` active. Mixing `size={19}` with `2.3`/`1.7` reads as two
   icon sets.
 - **Three redundant state signals**: primary text, heavier/filled icon, and the
   capsule. Colour is never the only carrier.
-- **Labels always visible.** Icon-only nav fails the everyday member.
+- **Labels always visible.** Icon-only nav fails the everyday member. At 320px
+  every equal grid item remains at least 44px wide and its label stays on one line.
 - `.nav-capsule` is one aria-hidden, pointer-transparent faux-glass element
   behind the active link. `--active-index` moves it between equal columns using
   transform only; the capsule never receives `backdrop-filter`.
 - `-webkit-tap-highlight-color: transparent`, since each item draws its own
   pressed state. Hover styling only inside `@media (hover: hover)`.
 - Reduced motion makes the capsule jump immediately and removes link/capsule
-  press scaling. Focus rings remain above the capsule.
+  press scaling. Focus rings remain above the capsule and inside the pill;
+  block-end scroll padding keeps focused page content above it.
 
 ### 5.3 Headers — four shared variants and class detail
 
