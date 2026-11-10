@@ -37,6 +37,7 @@ set search_path = public, pg_temp
 as $fn$
 declare
   caller_id uuid := (select auth.uid());
+  current_username text;
   normalized_name text;
   normalized_username text;
   affected integer;
@@ -45,13 +46,23 @@ begin
     raise exception 'forbidden';
   end if;
 
+  select p.username into current_username
+    from public.profiles p
+   where p.id = caller_id;
+  if not found then
+    raise exception 'profile missing';
+  end if;
+
   normalized_name := normalize(btrim(coalesce(new_name, '')), NFC);
   if char_length(normalized_name) < 1 or char_length(normalized_name) > 80 then
     raise exception 'invalid name';
   end if;
 
   normalized_username := nullif(lower(btrim(coalesce(new_username, ''))), '');
+  -- Validate only when the username is actually changing, so members whose
+  -- existing username predates the format rule can still edit their name.
   if normalized_username is not null
+     and normalized_username is distinct from lower(current_username)
      and normalized_username !~ '^[a-z][a-z0-9_]{2,19}$' then
     raise exception 'invalid username';
   end if;
