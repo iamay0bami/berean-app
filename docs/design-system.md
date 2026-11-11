@@ -937,6 +937,65 @@ Build/typecheck and these fixtures do not close that gate. No additional font,
 image file or dependency ships in either pass; inline SVG/HTML is not zero-byte
 payload.
 
+### 6.12 Profile — read-only library card
+
+Profile uses the existing 720px `.page-wrap` as `.profile-page`, with 24px
+inline gutters at every width and normal `AppShell` clearance above the floating
+nav. It is an owner-only personal library card, not a social dashboard. The
+screen order is identity → Your classes → Your reflections → Your prayers, and
+each content module is omitted completely when empty. No count, empty heading,
+placeholder row or artificial gap remains.
+
+`.profile-identity` is one raised, borderless card. Its sole visual signature is
+the `.profile-bookplate`: an opaque circular cloth ring rendered by `CoverCloth`
+with the member's own profile id as seed, around an opaque
+`.profile-bookplate__stamp`. The stamp renders the stored `profiles.initials`,
+the same source used throughout the app. `.profile-identity__name` is the sole
+h1, Berean Serif 600 normal at `--text-title` with 1.08 leading and no
+synthesis. Church name, role label and `Member since YYYY` are Hanken and wrap
+without truncation. At 320px the identity becomes one column; from 360px the
+bookplate and copy share `auto minmax(0, 1fr)` columns.
+
+Your classes reuses `ClassShelf` with only `getClassCatalog()` rows whose
+`isMine` is true. It keeps the Classes shelf's semantic list, generated cloth,
+keyboard behavior, column-edge bleed and 320/360 continuation peek. Leadership
+and active membership remain separate inputs; Profile introduces no class read
+or RLS path.
+
+`getMyInsights()` and `getMyPrayerPoints()` derive the authenticated id from
+`auth.getUser()`, filter `author_id` to that trusted id, order newest first and
+request 11 rows. The first ten render. If an eleventh exists, the corresponding
+grouped card ends with the plain line `Showing your 10 most recent.` There is no
+library link. The server filter—not SELECT RLS, which is intentionally broader—
+is the own-only presentation boundary. Prayer reads do not filter status, so the
+member's drafts remain visible.
+
+`.profile-list` is a grouped borderless card of `.row` primitives. A reflection
+is a real link to `/classes/[lessonId]` only when its lesson appears in
+`getReadableLessonSummaries()`; otherwise it is static `.row--plain` content
+without chevron or fake affordance. Prayer rows are always static and pair the
+full prayer text with a textual `Draft` or `Published` `.badge` containing the
+existing redundant dot, so state is not colour-only. From 768px reflections and
+prayers share two `minmax(0, 1fr)` columns when both exist; a lone module spans
+the row. Source and keyboard order never change, and no text box has a fixed
+height or clamp.
+
+The old generic avatar, tagline, stats, dead library buttons, leadership/admin
+links (including Invite code) and bare Sign out button are removed. Settings and
+Sign out return only with their real destinations in later passes; this
+read-only branch must not merge to main before those passes land. No Settings
+row is rendered in this pass.
+
+`.profile-skeleton` is a static route-local loader using the production Header,
+identity-card, shelf and grouped-row geometry. It has one `Loading profile…`
+status outside one inert, assistive-technology-hidden geometry wrapper. It has
+no cloth SVG, words, figures, fake controls, shimmer or animation.
+
+Profile adds no token, dependency, image, font, motion, migration, RPC, service
+key or RLS policy. It widens the existing borderless-card and shared static
+skeleton selectors at unchanged specificity; Home, Classes and class detail
+retain their existing declarations.
+
 ---
 
 ## 7. Imagery — generated cloth, not photographs

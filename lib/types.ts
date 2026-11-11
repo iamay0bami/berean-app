@@ -81,28 +81,34 @@ export interface DiscussionData {
   peopleCount: number
 }
 
-export interface ProfileStat {
-  value: number
-  label: string
-}
-
-export interface ProfileLink {
-  id: string
-  label: string
-  icon: 'bookmark' | 'feather' | 'compass'
-}
+export type AppRole = 'member' | 'class_leader' | 'admin'
+export type ContentStatus = 'draft' | 'published'
 
 export interface Profile {
+  id: string
   initials: string
-  memberSince: string
+  memberSinceYear: string
   name: string
-  tagline: string
+  churchName: string
   role: AppRole
-  stats: ProfileStat[]
-  links: ProfileLink[]
 }
 
-export type AppRole = 'member' | 'class_leader' | 'admin'
+export interface ProfileInsight {
+  id: string
+  lessonId: string
+  text: string
+}
+
+export interface ProfilePrayer {
+  id: string
+  text: string
+  status: ContentStatus
+}
+
+export interface ProfileContent<T> {
+  items: T[]
+  truncated: boolean
+}
 
 export interface ActiveClass {
   id: string
@@ -169,8 +175,6 @@ export interface AdminMember {
   role: AppRole
   assigned_class_id: string | null
 }
-
-export type ContentStatus = 'draft' | 'published'
 
 // Authoring-side types. Unlike Lesson (the camelCased reading-view shape built by
 // mapLesson), these are the raw column names the authoring reader selects, the same way
