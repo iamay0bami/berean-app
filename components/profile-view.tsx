@@ -112,6 +112,13 @@ export default function ProfileView({
           </div>
         </section>
 
+        <nav className="profile-section" aria-label="Profile options">
+          <Link className="row profile-row card card--borderless" href="/profile/settings">
+            <span className="row__main"><span className="profile-row__text">Settings</span></span>
+            <ChevronRight className="row__action" size={20} strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+        </nav>
+
         {classes.length > 0 && (
           <section className="profile-section" aria-labelledby="profile-classes-title">
             <SectionHeading id="profile-classes-title">Your classes</SectionHeading>

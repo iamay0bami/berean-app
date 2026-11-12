@@ -523,6 +523,24 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
   .profile-content-grid__section:only-child { grid-column: 1 / -1; }
 }
 
+/* Settings — quiet grouped lists within the existing Profile shell. */
+.settings-page { padding-inline: var(--space-5); }
+.settings-main { min-inline-size: 0; padding-block-end: var(--space-7); }
+.settings-back { margin-block-start: var(--space-3); }
+.settings-list { min-inline-size: 0; list-style: none; margin: var(--space-6) 0 0; padding: 0; overflow: hidden; }
+.settings-list .row { min-block-size: var(--touch-target); padding: var(--space-4); color: var(--text); text-decoration: none; }
+.settings-list .row__title { font-family: var(--font-interface), sans-serif; font-size: var(--text-body); font-weight: 600; line-height: 1.45; letter-spacing: 0; }
+.settings-page .row:focus-visible, .settings-theme-choice:has(.settings-theme-choice__input:focus-visible) { position: relative; z-index: 1; outline: var(--focus-width) solid var(--focus-ring); outline-offset: calc(-1 * var(--focus-width)); }
+.settings-theme-choice { cursor: pointer; }
+.settings-theme-choice__input { inline-size: var(--space-5); block-size: var(--space-5); flex: 0 0 auto; margin: 0; accent-color: var(--accent-text); }
+.settings-theme-choice__check { flex: 0 0 auto; color: var(--text); visibility: hidden; }
+.settings-theme-choice__check.is-selected { visibility: visible; }
+.settings-skeleton__back { inline-size: 8rem; block-size: var(--touch-target); }
+.settings-skeleton__title { inline-size: 56%; block-size: var(--text-display); }
+.settings-skeleton__row { justify-content: space-between; }
+.settings-skeleton__line { inline-size: 54%; block-size: var(--space-4); }
+.settings-skeleton__cue { inline-size: var(--space-5); block-size: var(--space-5); flex: 0 0 auto; }
+
 /* Class detail — art alone clips; meaningful content sizes the hero. */
 .class-detail-main { padding-block-end: var(--space-7); font-family: var(--font-interface), sans-serif; }
 .class-detail__wrap { display: flex; flex-direction: column; gap: var(--space-5); min-inline-size: 0; padding-inline: var(--space-5); }
@@ -540,7 +558,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .class-detail__leaders-title, .class-detail__tools-label { color: var(--text); font-family: var(--font-interface), sans-serif; font-weight: 600; font-size: var(--text-ui); line-height: 1.45; letter-spacing: 0; }
 .class-detail__leader-list { list-style: none; display: grid; gap: var(--space-2); margin: 0; padding: 0; }
 .class-detail__leader { color: var(--text); font-size: var(--text-body); font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
-:is(.class-detail, .classes-page, .home-page, .profile-page) .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+:is(.class-detail, .classes-page, .home-page, .profile-page, .settings-page) .card--borderless { border: var(--border-hairline); border-color: transparent; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
 .class-detail__summary { min-inline-size: 0; display: grid; align-content: start; gap: var(--space-5); padding: var(--space-5); }
 .class-detail__description, .class-detail__note, .class-detail__access-note { font-size: var(--text-body); line-height: 1.55; overflow-wrap: anywhere; }
 .class-detail__description { color: var(--text-muted); white-space: pre-wrap; }
@@ -690,7 +708,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 /* Classes index — the existing 720px page-wrap, with 24px gutters at every
    width. Only the shelf bleeds; other page-wrap users keep their own gutters. */
 .classes-page { padding-inline: var(--space-5); }
-.classes-page__title { margin-block-start: var(--space-6); font-family: var(--font-serif); font-weight: 600; font-style: normal; font-size: var(--text-display); line-height: 1.05; letter-spacing: -.02em; font-synthesis-weight: none; font-synthesis-style: none; }
+:is(.classes-page__title, .settings-page__title) { margin-block-start: var(--space-6); font-family: var(--font-serif); font-weight: 600; font-style: normal; font-size: var(--text-display); line-height: 1.05; letter-spacing: -.02em; font-synthesis-weight: none; font-synthesis-style: none; overflow-wrap: anywhere; }
 .classes-section { padding-block-start: var(--space-6); }
 .classes-section + .classes-section { padding-block-start: var(--space-7); }
 .classes-section .section-heading { gap: var(--space-3); margin-block-end: var(--space-4); }
@@ -722,7 +740,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 @media (prefers-reduced-transparency: reduce) { .cloth-caption--class { background: var(--glass-solid); } }
 
 /* Static route-local loading geometry. No shimmer, fake links or counts. */
-:is(.classes-skeleton, .home-skeleton, .profile-skeleton) .skeleton-block { display: block; background: var(--bg-sunken); border-radius: var(--radius-xs); }
+:is(.classes-skeleton, .home-skeleton, .profile-skeleton, .settings-skeleton) .skeleton-block { display: block; background: var(--bg-sunken); border-radius: var(--radius-xs); }
 .classes-skeleton__title { inline-size: 54%; block-size: var(--text-display); }
 .classes-skeleton__heading { inline-size: 46%; block-size: var(--text-heading); margin-block-end: var(--space-4); }
 .classes-skeleton__cover { inline-size: 100%; aspect-ratio: 3 / 4; }

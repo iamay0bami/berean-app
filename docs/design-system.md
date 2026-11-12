@@ -952,7 +952,7 @@ with the member's own profile id as seed, around an opaque
 `.profile-bookplate__stamp`. The stamp renders the stored `profiles.initials`,
 the same source used throughout the app. `.profile-identity__name` is the sole
 h1, Berean Serif 600 normal at `--text-title` with 1.08 leading and no
-synthesis. Church name, role label and `Member since YYYY` are Hanken and wrap
+synthesis. Church name, role label and `Joined YYYY` are Hanken and wrap
 without truncation. At 320px the identity becomes one column; from 360px the
 bookplate and copy share `auto minmax(0, 1fr)` columns.
 
@@ -981,10 +981,10 @@ the row. Source and keyboard order never change, and no text box has a fixed
 height or clamp.
 
 The old generic avatar, tagline, stats, dead library buttons, leadership/admin
-links (including Invite code) and bare Sign out button are removed. Settings and
-Sign out return only with their real destinations in later passes; this
-read-only branch must not merge to main before those passes land. No Settings
-row is rendered in this pass.
+links (including Invite code) and bare Sign out button remain removed. Profile
+now places one whole-card `Settings` row immediately after identity; role-gated
+leadership destinations live inside Settings. Sign out and Account return only
+when their later passes provide working destinations.
 
 `.profile-skeleton` is a static route-local loader using the production Header,
 identity-card, shelf and grouped-row geometry. It has one `Loading profile…`
@@ -995,6 +995,45 @@ Profile adds no token, dependency, image, font, motion, migration, RPC, service
 key or RLS policy. It widens the existing borderless-card and shared static
 skeleton selectors at unchanged specificity; Home, Classes and class detail
 retain their existing declarations.
+
+### 6.13 Settings — read-only shell, Appearance and Leadership
+
+Settings remains under `/profile`, so `lib/nav.ts` keeps Profile active and the
+floating bottom nav remains visible. Every Settings route uses the existing
+720px `.page-wrap` as `.settings-page`, restores 24px inline gutters at every
+width and clears the nav through `AppShell`'s existing `--nav-h` padding. Each
+screen has a visible 44px `Back to Profile` or `Back to Settings` link, one h1
+using the widened Classes large-title rule, and one grouped borderless card.
+There is no Account row, disabled destination, explanatory bare copy or dead
+control.
+
+`/profile/settings` reads `getCurrentRole()` on the server. Appearance is always
+present. Leadership is present only for `class_leader` and `admin`; role never
+comes from client state. Profile links to this index with one whole-card row
+immediately after identity.
+
+`/profile/settings/appearance` is a native `fieldset` and `legend` containing
+same-name Light, Dark and System radio inputs. Each whole-row label retains the
+native radio and adds a check icon as a redundant selected cue. The radios and
+Header toggle share one cookie reader, setter, custom event and root-attribute
+application path: either control updates the other without reload, the cookie
+survives reload, and `readTheme()` applies the choice to the server-rendered
+`html` element before first paint. System removes `data-theme` so the existing
+media query remains authoritative. There is no text-size control.
+
+`/profile/settings/leadership` is server-gated with `getCurrentRole()`. A member
+is redirected to `/profile/settings`. A class leader sees only Manage class and
+Write lessons. An admin sees only Manage members, Manage classes and Write
+lessons. These are links to existing destinations; Invite code, sermon
+authoring, moderation and church-name controls remain absent.
+
+Settings uses Hanken for links, controls and row titles, with Berean Serif 600
+normal reserved for the h1. Rows and radios keep 44px minimum targets, visible
+focus and no new motion or filtered surface. `.settings-skeleton` widens the
+shared static skeleton selector and backs three route-local shape-matched
+loaders, each with one status outside one inert, assistive-technology-hidden
+geometry wrapper. This pass adds no migration, server action, token, dependency,
+image, font, RPC or RLS surface.
 
 ---
 
