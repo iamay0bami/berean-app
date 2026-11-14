@@ -17,6 +17,12 @@ export default function SettingsView({ role }: { role: AppRole }) {
         <h1 className="settings-page__title">Settings</h1>
         <ul className="settings-list card card--borderless">
           <li>
+            <Link className="row" href="/profile/settings/account">
+              <span className="row__main"><span className="row__title">Account</span></span>
+              <ChevronRight className="row__action" size={20} strokeWidth={1.8} aria-hidden="true" />
+            </Link>
+          </li>
+          <li>
             <Link className="row" href="/profile/settings/appearance">
               <span className="row__main"><span className="row__title">Appearance</span></span>
               <ChevronRight className="row__action" size={20} strokeWidth={1.8} aria-hidden="true" />

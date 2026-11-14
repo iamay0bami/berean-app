@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { LESSON_HAS_INSIGHTS } from '@/lib/messages'
@@ -11,6 +12,40 @@ const GENERIC_SIGN_IN_ERROR = 'Invalid email/username or password'
 const CONFIRM_EMAIL_ERROR = 'Please confirm your email before signing in — check your inbox.'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DUMMY_RESOLUTION_EMAIL = 'no-such-account@example.com'
+const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,19}$/
+const USERNAME_FORMAT_ERROR = 'Usernames are 3–20 characters, start with a letter, and use only lowercase letters, numbers, and underscores.'
+const USERNAME_TAKEN_ERROR = 'That username is already taken.'
+const NAME_ERROR = 'Name must be between 1 and 80 characters.'
+const ACCOUNT_SAVE_ERROR = "We couldn't save your changes. Try again."
+const PASSWORD_CHANGE_ERROR = "We couldn't change your password. Try again."
+const SESSION_EXPIRED_ERROR = 'Your session has expired. Sign in again.'
+const REAUTHENTICATION_ERROR_CODES = new Set([
+  'reauth_nonce_missing',
+  'reauthentication_needed',
+  'reauthentication_not_valid',
+])
+
+type ActionResult = { error: string | null; message?: string }
+type PublicError = { code?: string; message?: string } | null
+
+function accountError(error: PublicError) {
+  const message = error?.message?.toLowerCase() ?? ''
+  if (error?.code === '23505' || message.includes('username already taken')) return USERNAME_TAKEN_ERROR
+  if (message.includes('invalid username')) return USERNAME_FORMAT_ERROR
+  if (message.includes('invalid name')) return NAME_ERROR
+  return ACCOUNT_SAVE_ERROR
+}
+
+function isWrongPassword(error: PublicError) {
+  const message = error?.message?.toLowerCase() ?? ''
+  return error?.code === 'invalid_credentials' || message.includes('invalid login credentials')
+}
+
+function isReauthenticationError(error: PublicError) {
+  const code = error?.code ?? ''
+  const message = error?.message?.toLowerCase() ?? ''
+  return REAUTHENTICATION_ERROR_CODES.has(code) || message.includes('reauthentication') || message.includes('nonce')
+}
 
 function signInError(error: { message?: string; code?: string } | null) {
   if (error) {
@@ -60,8 +95,7 @@ async function userClient() {
   return { supabase, user }
 }
 
-// The conversion marker for everything between here and updateMyProfile. These actions
-// used to throw; Next.js redacts a thrown Server Action message in production, so they
+// The actions below used to throw; Next.js redacts a thrown Server Action message in production, so they
 // return `{ error }` like the newer half of this file already does. UPDATE and DELETE
 // additionally chain `.select('id')`: RLS filters those silently and reports zero rows
 // as success, which is exactly the lie this batch exists to remove.
@@ -223,25 +257,111 @@ export async function removePrayerConfirmation(prayerPointId: string): Promise<{
   }
 }
 
-export async function updateMyProfile(name: string, initials: string, tagline: string): Promise<{ error: string | null }> {
+export async function updateOwnAccount(name: string, username: string): Promise<ActionResult> {
   try {
-    const { supabase } = await userClient()
-    const { error } = await supabase.rpc('update_my_profile', {
-      new_name: requireText(name),
-      new_initials: requireText(initials),
-      new_tagline: normalizeHumanText(tagline),
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: SESSION_EXPIRED_ERROR }
+
+    const normalizedName = normalizeHumanText(name)
+    const normalizedUsername = username.trim().toLowerCase()
+    const nameLength = Array.from(normalizedName).length
+    if (nameLength < 1 || nameLength > 80) return { error: NAME_ERROR }
+
+    const { data: current, error: readError } = await supabase
+      .from('profiles')
+      .select('name,username')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (readError) return { error: ACCOUNT_SAVE_ERROR }
+    if (!current) return { error: 'Your profile is still being set up. Try again shortly.' }
+
+    const currentName = normalizeHumanText(current.name ?? '')
+    const currentUsername = (current.username ?? '').trim().toLowerCase()
+    if (normalizedUsername !== currentUsername && normalizedUsername && !USERNAME_PATTERN.test(normalizedUsername)) {
+      return { error: USERNAME_FORMAT_ERROR }
+    }
+    if (normalizedName === currentName && normalizedUsername === currentUsername) {
+      return { error: 'No changes to save.' }
+    }
+
+    const { error } = await supabase.rpc('update_own_account', {
+      new_name: normalizedName,
+      new_username: normalizedUsername,
     })
-    if (error) return { error: error.message }
+    if (error) return { error: accountError(error) }
+
     revalidatePath('/profile')
-    return { error: null }
-  } catch (cause) {
-    return { error: cause instanceof Error ? cause.message : 'Unable to update your profile.' }
+    revalidatePath('/profile/settings/account')
+    return { error: null, message: 'Changes saved.' }
+  } catch {
+    return { error: ACCOUNT_SAVE_ERROR }
   }
 }
 
-export async function signOut() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+export async function changePassword(current: string, next: string, confirm: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user?.email) return { error: SESSION_EXPIRED_ERROR }
+
+    if (!current) return { error: 'Enter your current password.' }
+    if (!next) return { error: 'Enter a new password.' }
+    if (next.length < 6) return { error: 'Password must be at least 6 characters.' }
+    if (!confirm) return { error: 'Confirm your new password.' }
+    if (next !== confirm) return { error: 'Passwords do not match.' }
+
+    const { error: verificationError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: current,
+    })
+    if (verificationError) {
+      // Code/status make live reauthentication requirements observable without exposing credentials or identity.
+      console.error('[changePassword:verification]', verificationError.code, verificationError.status)
+      return { error: isWrongPassword(verificationError) ? 'Current password is incorrect.' : PASSWORD_CHANGE_ERROR }
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: next })
+    if (updateError) {
+      console.error(isReauthenticationError(updateError) ? '[changePassword:reauthentication]' : '[changePassword:update]', updateError.code, updateError.status)
+      if (updateError.code === 'weak_password') return { error: 'That password is too easy to guess. Choose a stronger one.' }
+      if (updateError.code === 'same_password') return { error: 'Choose a password different from your current one.' }
+      return { error: PASSWORD_CHANGE_ERROR }
+    }
+    return { error: null, message: 'Password changed. You can also sign out other devices below.' }
+  } catch {
+    return { error: PASSWORD_CHANGE_ERROR }
+  }
+}
+
+export async function signOutOtherDevices(): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: SESSION_EXPIRED_ERROR }
+    const { error } = await supabase.auth.signOut({ scope: 'others' })
+    if (error) return { error: "We couldn't sign out other devices. Try again." }
+    return { error: null, message: 'Other devices signed out.' }
+  } catch {
+    return { error: "We couldn't sign out other devices. Try again." }
+  }
+}
+
+export async function signOut(): Promise<ActionResult> {
+  let failed: string | null = null
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) failed = SESSION_EXPIRED_ERROR
+    else {
+      const { error } = await supabase.auth.signOut()
+      if (error) failed = "We couldn't sign you out. Try again."
+    }
+  } catch {
+    failed = "We couldn't sign you out. Try again."
+  }
+  if (failed) return { error: failed }
+  redirect('/auth/sign-in')
 }
 
 const CLASS_SLUG_FALLBACK = 'class'

@@ -38,6 +38,13 @@
   code — that duplicates trigger logic in a second place and can mask a
   real trigger regression. If a profile is missing, surface a pending
   state and investigate the trigger, don't insert around it.
+- Member-facing profile writes go only through
+  `public.update_own_account(name, username)`. Never grant table `UPDATE` on
+  `profiles`; the app never writes `role`, `organization_id` or
+  `assigned_class_id`. Username format is enforced in signup and the RPC, not
+  by a database constraint. Account password changes verify the current
+  password with `signInWithPassword` before `updateUser`, and every Account
+  action returns `{ error: string | null }` rather than throwing.
 - Server-side Postgres functions returning `text` from a `plpgsql`
   `RETURN QUERY` need explicit `::text` casts when selecting from
   `auth.users.email` (it's `varchar(255)`, not `text`) — `language sql`

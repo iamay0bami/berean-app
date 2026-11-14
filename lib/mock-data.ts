@@ -613,6 +613,31 @@ export async function getDiscussionData(): Promise<DiscussionData> {
   }
 }
 
+export type OwnAccountResult =
+  | { status: 'anonymous' }
+  | { status: 'pending' }
+  | { status: 'ready'; account: { name: string; username: string; email: string } }
+
+export async function getOwnAccount(): Promise<OwnAccountResult> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return { status: 'anonymous' }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('name,username')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return { status: 'pending' }
+  return {
+    status: 'ready',
+    account: {
+      name: normalizeHumanText(data.name ?? ''),
+      username: (data.username ?? '').trim(),
+      email: user.email ?? '',
+    },
+  }
+}
+
 export type ProfileResult =
   | { status: 'anonymous' }
   | { status: 'pending' }

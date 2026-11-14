@@ -540,6 +540,21 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .settings-skeleton__row { justify-content: space-between; }
 .settings-skeleton__line { inline-size: 54%; block-size: var(--space-4); }
 .settings-skeleton__cue { inline-size: var(--space-5); block-size: var(--space-5); flex: 0 0 auto; }
+.settings-form-card { min-inline-size: 0; margin-block-start: var(--space-5); padding: var(--space-5); font-family: var(--font-interface), sans-serif; }
+.settings-form-card .card__title { margin: 0; }
+.settings-form { min-inline-size: 0; display: grid; gap: var(--space-4); margin-block-start: var(--space-5); }
+.settings-form .field__status { display: grid; min-block-size: var(--space-7); margin: 0; color: var(--text-muted); }
+.settings-form .field__status::before, .settings-form__status::before { content: attr(data-reserve); visibility: hidden; grid-area: 1 / 1; }
+.settings-form [data-status-text] { grid-area: 1 / 1; min-inline-size: 0; overflow-wrap: anywhere; }
+.settings-form .field__status.error, .settings-form__status.error { color: var(--danger); }
+.settings-form .field__input[readonly] { color: var(--text-muted); cursor: default; }
+.settings-form .password-field .field__input { padding-inline-end: calc(var(--touch-target) + var(--space-2)); }
+.settings-form .password-toggle { inset-inline-end: 0; inline-size: var(--touch-target); block-size: var(--touch-target); color: var(--text-muted); }
+.settings-form .password-toggle:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: calc(-1 * var(--focus-width)); border-radius: var(--radius-sm); }
+.settings-form > .btn { display: inline-grid; justify-self: start; min-inline-size: min(100%, calc(var(--space-8) + var(--space-8) + var(--space-7))); max-inline-size: 100%; padding-block: var(--space-2); text-align: center; overflow-wrap: anywhere; }
+.settings-form > .btn > [aria-hidden] { grid-area: 1 / 1; min-inline-size: 0; }
+.settings-form > .btn > [aria-hidden='true'] { visibility: hidden; }
+.settings-form__status { display: grid; min-block-size: var(--space-8); margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; }
 
 /* Class detail — art alone clips; meaningful content sizes the hero. */
 .class-detail-main { padding-block-end: var(--space-7); font-family: var(--font-interface), sans-serif; }
