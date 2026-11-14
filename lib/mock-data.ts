@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassCatalogItem, ClassDetail, ClassLeader, ClassLeaderDisplay, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, HomeLessonHighlights, Lesson, LessonEdit, LessonEditQuestion, LessonSummary, LessonThought, PrayerPoint, Profile, Sermon } from '@/lib/types'
+import type { ActiveClass, AdminClass, AdminMember, AppRole, AuthorLesson, ClassCatalogItem, ClassDetail, ClassLeader, ClassLeaderDisplay, ClassMember, ContentStatus, DiscussionData, DiscussionEntry, HomeLessonHighlights, Lesson, LessonEdit, LessonEditQuestion, LessonSummary, LessonThought, PrayerPoint, Profile, ProfileContent, ProfileInsight, ProfilePrayer, Sermon } from '@/lib/types'
 import { createClient } from '@/lib/supabase/server'
 import { normalizeHumanText, normalizeHumanTextArray, normalizeOptionalHumanText } from '@/lib/text'
 
@@ -613,35 +613,113 @@ export async function getDiscussionData(): Promise<DiscussionData> {
   }
 }
 
+export type OwnAccountResult =
+  | { status: 'anonymous' }
+  | { status: 'pending' }
+  | { status: 'ready'; account: { name: string; username: string; email: string } }
+
+export async function getOwnAccount(): Promise<OwnAccountResult> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return { status: 'anonymous' }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('name,username')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return { status: 'pending' }
+  return {
+    status: 'ready',
+    account: {
+      name: normalizeHumanText(data.name ?? ''),
+      username: (data.username ?? '').trim(),
+      email: user.email ?? '',
+    },
+  }
+}
+
 export type ProfileResult =
   | { status: 'anonymous' }
   | { status: 'pending' }
   | { status: 'ready'; profile: Profile }
 
+const PROFILE_CONTENT_QUERY_LIMIT = 11
+const PROFILE_CONTENT_RENDER_LIMIT = 10
+
+export async function getMyInsights(): Promise<ProfileContent<ProfileInsight>> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return { items: [], truncated: false }
+  // Own-only is guaranteed by this trusted server filter, not by SELECT RLS,
+  // which intentionally permits same-organization insight reads elsewhere.
+  const { data, error } = await supabase
+    .from('insights')
+    .select('id,lesson_id,text')
+    .eq('author_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(PROFILE_CONTENT_QUERY_LIMIT)
+  if (error) throw error
+  const rows = data ?? []
+  return {
+    items: rows.slice(0, PROFILE_CONTENT_RENDER_LIMIT).map(row => ({
+      id: row.id,
+      lessonId: row.lesson_id,
+      text: normalizeHumanText(row.text),
+    })),
+    truncated: rows.length > PROFILE_CONTENT_RENDER_LIMIT,
+  }
+}
+
+export async function getMyPrayerPoints(): Promise<ProfileContent<ProfilePrayer>> {
+  const { supabase, user } = await getSessionUser()
+  if (!user) return { items: [], truncated: false }
+  // Own-only is guaranteed by this trusted server filter, not by SELECT RLS.
+  // No status filter is added: authors can read their own drafts under current RLS.
+  const { data, error } = await supabase
+    .from('prayer_points')
+    .select('id,text,status')
+    .eq('author_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(PROFILE_CONTENT_QUERY_LIMIT)
+  if (error) throw error
+  const rows = data ?? []
+  return {
+    items: rows.slice(0, PROFILE_CONTENT_RENDER_LIMIT).map(row => ({
+      id: row.id,
+      text: normalizeHumanText(row.text),
+      status: row.status as ContentStatus,
+    })),
+    truncated: rows.length > PROFILE_CONTENT_RENDER_LIMIT,
+  }
+}
+
 export async function getProfile(): Promise<ProfileResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'anonymous' }
-  const { data, error } = await supabase.from('profiles').select('name,initials,tagline,member_since,role').eq('id', user.id).maybeSingle()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,name,initials,member_since,role,organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
   if (error) throw error
   if (!data) return { status: 'pending' }
-  const [{ count: thoughts }, { count: prayers }] = await Promise.all([
-    supabase.from('insights').select('*', { count: 'exact', head: true }).eq('author_id', user.id),
-    supabase.from('prayer_confirmations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-  ])
+
+  const { data: organization, error: organizationError } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', data.organization_id)
+    .maybeSingle()
+  if (organizationError) throw organizationError
+
   return {
     status: 'ready',
     profile: {
+      id: data.id,
       initials: normalizeHumanText(data.initials),
-      memberSince: `WALKING SINCE ${new Date(data.member_since).getFullYear()}`,
+      memberSinceYear: String(data.member_since).slice(0, 4),
       name: normalizeHumanText(data.name),
-      tagline: normalizeHumanText(data.tagline),
+      churchName: normalizeHumanText(organization?.name ?? ''),
       role: data.role as AppRole,
-      stats: [{ value: thoughts ?? 0, label: 'THOUGHTS' }, { value: prayers ?? 0, label: 'PRAYERS' }],
-      // Rows return with their surfaces: reflections (batch 7) and reading
-      // settings (batch 8). A button with nothing behind it is worse than a
-      // missing row.
-      links: [],
     },
   }
 }

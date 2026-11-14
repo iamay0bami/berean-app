@@ -937,6 +937,159 @@ Build/typecheck and these fixtures do not close that gate. No additional font,
 image file or dependency ships in either pass; inline SVG/HTML is not zero-byte
 payload.
 
+### 6.12 Profile — read-only library card
+
+Profile uses the existing 720px `.page-wrap` as `.profile-page`, with 24px
+inline gutters at every width and normal `AppShell` clearance above the floating
+nav. It is an owner-only personal library card, not a social dashboard. The
+screen order is identity → Your classes → Your reflections → Your prayers, and
+each content module is omitted completely when empty. No count, empty heading,
+placeholder row or artificial gap remains.
+
+`.profile-identity` is one raised, borderless card. Its sole visual signature is
+the `.profile-bookplate`: an opaque circular cloth ring rendered by `CoverCloth`
+with the member's own profile id as seed, around an opaque
+`.profile-bookplate__stamp`. The stamp renders the stored `profiles.initials`,
+the same source used throughout the app. `.profile-identity__name` is the sole
+h1, Berean Serif 600 normal at `--text-title` with 1.08 leading and no
+synthesis. Church name, role label and `Joined YYYY` are Hanken and wrap
+without truncation. At 320px the identity becomes one column; from 360px the
+bookplate and copy share `auto minmax(0, 1fr)` columns.
+
+Your classes reuses `ClassShelf` with only `getClassCatalog()` rows whose
+`isMine` is true. It keeps the Classes shelf's semantic list, generated cloth,
+keyboard behavior, column-edge bleed and 320/360 continuation peek. Leadership
+and active membership remain separate inputs; Profile introduces no class read
+or RLS path.
+
+`getMyInsights()` and `getMyPrayerPoints()` derive the authenticated id from
+`auth.getUser()`, filter `author_id` to that trusted id, order newest first and
+request 11 rows. The first ten render. If an eleventh exists, the corresponding
+grouped card ends with the plain line `Showing your 10 most recent.` There is no
+library link. The server filter—not SELECT RLS, which is intentionally broader—
+is the own-only presentation boundary. Prayer reads do not filter status, so the
+member's drafts remain visible.
+
+`.profile-list` is a grouped borderless card of `.row` primitives. A reflection
+is a real link to `/classes/[lessonId]` only when its lesson appears in
+`getReadableLessonSummaries()`; otherwise it is static `.row--plain` content
+without chevron or fake affordance. Prayer rows are always static and pair the
+full prayer text with a textual `Draft` or `Published` `.badge` containing the
+existing redundant dot, so state is not colour-only. From 768px reflections and
+prayers share two `minmax(0, 1fr)` columns when both exist; a lone module spans
+the row. Source and keyboard order never change, and no text box has a fixed
+height or clamp.
+
+The old generic avatar, tagline, stats, dead library buttons, leadership/admin
+links (including Invite code) and bare Sign out button remain removed. Profile
+now places one whole-card `Settings` row immediately after identity; role-gated
+leadership destinations live inside Settings. Account and sign-out controls live
+on the working Account destination; no account control remains on Profile itself.
+
+`.profile-skeleton` is a static route-local loader using the production Header,
+identity-card, shelf and grouped-row geometry. It has one `Loading profile…`
+status outside one inert, assistive-technology-hidden geometry wrapper. It has
+no cloth SVG, words, figures, fake controls, shimmer or animation.
+
+Profile adds no token, dependency, image, font, motion, migration, RPC, service
+key or RLS policy. It widens the existing borderless-card and shared static
+skeleton selectors at unchanged specificity; Home, Classes and class detail
+retain their existing declarations.
+
+### 6.13 Settings — shell, Account, Appearance and Leadership
+
+Settings remains under `/profile`, so `lib/nav.ts` keeps Profile active and the
+floating bottom nav remains visible. Every Settings route uses the existing
+720px `.page-wrap` as `.settings-page`, restores 24px inline gutters at every
+width and clears the nav through `AppShell`'s existing `--nav-h` padding. Each
+screen has a visible 44px `Back to Profile` or `Back to Settings` link and one h1
+using the widened Classes large-title rule. The index is one grouped borderless
+card; Account uses the form-card composition documented in §6.14. There is no
+disabled destination, explanatory bare copy or dead control.
+
+`/profile/settings` reads `getCurrentRole()` on the server. Account is the first
+row and Appearance follows it. Leadership is present only for `class_leader` and
+`admin`; role never comes from client state. Profile links to this index with one
+whole-card row immediately after identity.
+
+`/profile/settings/appearance` is a native `fieldset` and `legend` containing
+same-name Light, Dark and System radio inputs. Each whole-row label retains the
+native radio and adds a check icon as a redundant selected cue. The radios and
+Header toggle share one cookie reader, setter, custom event and root-attribute
+application path: either control updates the other without reload, the cookie
+survives reload, and `readTheme()` applies the choice to the server-rendered
+`html` element before first paint. System removes `data-theme` so the existing
+media query remains authoritative. There is no text-size control.
+
+`/profile/settings/leadership` is server-gated with `getCurrentRole()`. A member
+is redirected to `/profile/settings`. A class leader sees only Manage class and
+Write lessons. An admin sees only Manage members, Manage classes and Write
+lessons. These are links to existing destinations; Invite code, sermon
+authoring, moderation and church-name controls remain absent.
+
+Settings uses Hanken for links, controls and row titles, with Berean Serif 600
+normal reserved for the h1. Rows and radios keep 44px minimum targets, visible
+focus and no new motion or filtered surface. `.settings-skeleton` widens the
+shared static skeleton selector and backs four route-local static loaders, each
+with one status outside one inert, assistive-technology-hidden geometry wrapper.
+
+### 6.14 Account — own identity and authenticated sessions
+
+`/profile/settings/account` is the only member-facing account editor. Its server
+reader authenticates with `auth.getUser()`, selects only the signed-in member's
+`profiles.name` and `profiles.username`, and takes the read-only email from the
+auth user. An absent auth user redirects to sign-in with the Account route as
+`next`; an absent profile renders the existing pending state and never inserts a
+replacement row.
+
+The page keeps the Settings 24px gutters, Back to Settings link, single Account
+h1 and floating-nav clearance. Four quiet `.settings-form-card` surfaces follow:
+Personal details, Password, Sessions and Current session. Their h2 headings use
+Berean Serif 600 normal through `.card__title`; labels, hints, values, statuses
+and controls use Hanken. The forms reuse `.field`, `.field__label`,
+`.field__input`, `.field__hint`, `.field__status`, `.btn`, `.btn--primary`,
+`.btn--secondary` and `.btn--danger`. The only Account-specific classes are
+`.settings-form-card`, `.settings-form` and `.settings-form__status`.
+
+Personal details sends only name and username to `updateOwnAccount`. The action
+authenticates again, normalizes name with trim plus NFC, counts Unicode code
+points against the 1–80 range, trims and lowercases the optional username, and
+validates a changed nonblank username against `^[a-z][a-z0-9_]{2,19}$`. A legacy
+username therefore does not block a name-only edit. No-change requests stop
+before the RPC. Writes use only `public.update_own_account`; no application path
+updates `profiles` directly. Success revalidates only `/profile` and
+`/profile/settings/account`. Email is read-only and is never passed to
+`updateUser`.
+
+Password changes send current, new and confirmation values only to the server
+action. It authenticates independently, obtains the email from `auth.getUser()`,
+verifies the current password with `signInWithPassword`, then uses
+`updateUser({ password })`. The six-character signup minimum remains unchanged.
+Successful submission clears all three values and announces that other devices
+can be signed out below. Sessions uses `signOut({ scope: 'others' })`, explicitly
+leaving the current device signed in. Current session uses the exported
+`signOut`, redirects only after successful sign-out, and otherwise returns a
+bounded error.
+
+All labels are visible. Name, username, current-password and both new-password
+fields carry their correct autocomplete values; username disables spelling and
+capitalization. Inputs remain `--text-body` (16px), password pasting is not
+blocked, every target is at least 44px, and submit buttons are enabled until an
+action is actually pending. Each invalid input uses `aria-invalid` and a linked
+status id; submission focuses the first invalid field. Form statuses are polite
+live regions. Field slots reserve at least `--space-7` (48px), and form slots at
+least `--space-8` (64px). A hidden, non-announced copy of each slot's longest
+bounded message sizes it as text wraps, including at 200% text. The visible
+message occupies the same grid cell, so idle, error, pending and success do not
+move the following content. Idle and pending button labels likewise share one
+grid cell, keeping both width and height stable; only the active label is exposed
+to assistive technology. Password-toggle focus is explicit, and Account inputs
+reserve the full 44px toggle plus an 8px text clearance. Client request failures
+restore the submit controls and show the same bounded fallback as the action.
+The route loader uses the existing static Settings geometry with one status and
+no fake data or animation. Account adds no token, dependency, image, font,
+migration or RLS surface.
+
 ---
 
 ## 7. Imagery — generated cloth, not photographs
