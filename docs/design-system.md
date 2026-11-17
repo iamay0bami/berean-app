@@ -1090,6 +1090,74 @@ The route loader uses the existing static Settings geometry with one status and
 no fake data or animation. Account adds no token, dependency, image, font,
 migration or RLS surface.
 
+
+### 6.15 Auth — Pass 1 foundation and chooser
+
+The auth restyle is reference-led by `docs/references/refero.design Nooka (3).jpg`
+for the cardless welcome and the Nooka signup/login captures for mobile forms.
+Forms retain one opaque contained card from 768px; no filtered auth surface,
+illustration, social login, legal agreement, new font or dependency is added.
+
+`/auth` is the chooser, implemented in `app/auth/(welcome)/page.tsx`. Signed-in
+visitors go to `/home`, matching the existing auth entry guards. Its sole h1 is
+`Welcome to Berean`, with `A place to read and learn with your church.` below.
+Three real links are Sign in, Join with an invite code and Start a new church.
+For Pass 1 both signup choices go to the existing `/auth/sign-up`; the founder
+choice explicitly tells visitors to choose the existing Start a new church
+switch on the next screen. The dedicated founder route belongs to a later pass.
+The chooser does not mount AppShell, AuthHeader or bottom navigation.
+
+`AuthFrame` in `components/auth-presentation.tsx` is the reusable normal-flow
+composition for subsequent migrations: existing brand-only AuthHeader, real
+Back link, heading/description above one `.auth-card.card.card--borderless`,
+children and an optional footer. Pass 1 does not replace the existing forms
+with this frame or change their handlers, validation, copy or redirects.
+
+The foundation prepares all three existing auth form consumers together:
+class-based headings, descriptions, forms and links; `.field__input` on text
+controls, including PasswordField's existing `inputClassName` prop; shared
+button primitives. Their placeholder-only labels remain until each later form
+pass. Only after every consumer has its hooks are the conflicting
+`.auth-card h1`, `.auth-card > p`, `.auth-card form`, `.auth-card input` and
+`.auth-card a` rules retired in place. No specificity patches or duplicate
+control declarations are added. Existing mode/confirmation selectors remain
+until their dedicated passes; shared legacy classes used elsewhere survive.
+
+Auth retains the existing 720px `.page-wrap`, with the 24px gutter selector
+widened in place. `.auth-card` reuses the existing 34rem `--measure`, zero mobile
+inner padding and `--space-6` padding from 768px. Its mobile variant has no
+visible card fill, border or shadow; desktop uses the widened shared borderless
+card rule. Long forms grow and scroll; no fixed card height or internal scroller.
+
+| Hook | Pass 1 contract |
+| --- | --- |
+| `.auth-page` | Existing minimum `100vh`/`100dvh` fallback, 24px gutters, token block spacing plus top/bottom safe areas; no nav clearance |
+| `.auth-page--welcome` | Cardless flex column; identity uses available space, destinations remain ordinary-flow content at the foot |
+| `.auth-page--flow` | Shared frame's auto header plus content-sized remaining grid row; no sticky positioning |
+| `.auth-content` | Shrinkable whole-flow group, maximum `--measure`, `--space-5` gaps |
+| `.auth-intro` | Centered heading/description group, `--space-2` gap |
+| `.auth-title` | Widened Classes/Settings display role: Berean Serif 600 normal, `--text-display`, no synthesis; auth wraps at 1.2 leading |
+| `.auth-description` | Hanken, `--text-body`, 1.55 leading, `--text-muted`, wrapping; no placeholder label substitute |
+| `.auth-choices` | Full-width existing button links, `--space-3` gaps, `--space-7` separation from identity; final hint reuses `.field__hint` |
+| `.auth-form` | Widened Settings grid/status/password/pending extension points, unchanged specificity; Hanken, `--space-4` gap; auth submit full width |
+| `.auth-form__status` | Widened existing 64px-minimum form-status/reservation/error rules; extension point only, not a new Pass 1 error implementation |
+
+Account's status reservation, password clearance, 44px toggle/focus and pending
+button selectors are widened with `:is(.settings-form, .auth-form)` in place.
+The Account read-only input rule is not widened. The existing `.field__input`
+continues to own 16px control text and strong borders; PasswordField logic and
+icons remain unchanged. Auth-scoped reduced motion removes press scaling as
+well as transitions. No new token or surface/typography system is introduced.
+
+Pass 1 evidence is **synthetic**, stored only in
+`.claude/evidence/auth-restyle/pass-1/`. Fixtures, screenshots and notes are never
+staged or committed and no fixture route ships in the application. Required
+regression checks include both existing signup modes, sign-in, forgot/update
+password, and identical Account password-form before/after signatures at
+360/1024 in both themes. Synthetic checks do not close the developer's live
+auth/session/RLS validation gate. Later approved copy amendments do not change
+any provider-message handling in this foundation pass.
+
 ---
 
 ## 7. Imagery — generated cloth, not photographs
