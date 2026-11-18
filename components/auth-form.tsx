@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { normalizeHumanText } from '@/lib/text'
 import { signInWithIdentifier } from '@/app/actions'
 import PasswordField from '@/components/password-field'
+import { AuthFrame } from '@/components/auth-presentation'
 
 const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,19}$/
 const USERNAME_FORMAT_ERROR = 'Usernames are 3–20 characters, start with a letter, and use only lowercase letters, numbers, and underscores.'
@@ -39,6 +40,30 @@ async function inviteCodeCheck(value: string): Promise<{ ok: boolean; note: User
   if (data === true) return { ok: true, note: { message: 'Invite code accepted.', kind: 'ok' } }
   return { ok: false, note: { message: "That invite code isn't valid.", kind: 'error' } }
 }
+
+function signInMessageCopy(message: string) {
+  switch (message) {
+    case 'Invalid email/username or password':
+      return "That email or username and password don't match. Check both and try again."
+    case 'Please confirm your email before signing in — check your inbox.':
+      return 'Confirm your email before signing in. Check your inbox.'
+    default:
+      return message
+  }
+}
+
+function signInNoticeCopy(notice?: string) {
+  switch (notice) {
+    case 'That link is invalid or has expired. Please request a new one.':
+      return 'That link is invalid or has expired. Request a new link.'
+    case 'Password updated — sign in with your new password.':
+      return 'Password updated. Sign in with your new password.'
+    default:
+      return notice ?? ''
+  }
+}
+
+const SIGN_IN_RESULT_RESERVE = signInMessageCopy('Invalid email/username or password')
 
 export default function AuthForm({ mode, next, notice, invite }: { mode: 'sign-in' | 'sign-up'; next?: string; notice?: string; invite?: string }) {
   const [identifier, setIdentifier] = useState('')
@@ -161,5 +186,74 @@ export default function AuthForm({ mode, next, notice, invite }: { mode: 'sign-i
     window.location.assign('/home')
   }
 
-  return <main className="page-wrap auth-page"><div className="auth-card card card--borderless"><span className="brand-glyph">B</span><h1 className="auth-title">{mode === 'sign-in' ? <>Welcome <em>back.</em></> : <>Make room <em>to listen.</em></>}</h1><p className="auth-description">{mode === 'sign-in' ? 'Sign in to continue your formation.' : 'Create your Berean account with email.'}</p><form className="auth-form" onSubmit={submit}>{mode === 'sign-up' && <><div className="auth-toggle" role="group" aria-label="How are you joining?"><button type="button" className={`btn btn--secondary${joinMode === 'join' ? ' active' : ''}`} aria-pressed={joinMode === 'join'} onClick={() => chooseJoinMode('join')}>Join with invite code</button><button type="button" className={`btn btn--secondary${joinMode === 'start' ? ' active' : ''}`} aria-pressed={joinMode === 'start'} onClick={() => chooseJoinMode('start')}>Start a new church</button></div><input className="field__input" required value={name} onChange={event => setName(event.target.value)} placeholder="Name" autoComplete="name" /><input className="field__input" value={username} onChange={event => { latestUsername.current = event.target.value; setUsername(event.target.value); setUsernameNote({ message: '', kind: null }) }} onBlur={handleUsernameBlur} placeholder="Username (optional)" autoComplete="username" />{usernameNote.message && <p className={`field-message ${usernameNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{usernameNote.message}</p>}{joinMode === 'join' ? <><input className="field__input" required value={inviteCode} onChange={event => { latestInvite.current = event.target.value; setInviteCode(event.target.value); setInviteNote({ message: '', kind: null }) }} onBlur={handleInviteBlur} placeholder="Invite code" autoComplete="off" />{inviteNote.message && <p className={`field-message ${inviteNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{inviteNote.message}</p>}</> : <><p className="auth-note">You&apos;re creating a new organization on Berean and will become its administrator. Only do this if you&apos;re setting up your own church, not joining an existing one.</p><input className="field__input" required value={orgName} onChange={event => setOrgName(event.target.value)} placeholder="Church name" autoComplete="organization" /><label className="auth-confirm"><input type="checkbox" required checked={confirmedNewChurch} onChange={event => setConfirmedNewChurch(event.target.checked)} /><span>I&apos;m setting up a new church</span></label></>}</>}<input className="field__input" required type={mode === 'sign-in' ? 'text' : 'email'} value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder={mode === 'sign-in' ? 'Email or username' : 'Email'} autoComplete={mode === 'sign-in' ? 'username' : 'email'} /><PasswordField inputClassName="field__input" value={password} onChange={setPassword} placeholder="Password" autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} />{mode === 'sign-in' && <p className="auth-description"><Link className="btn btn--quiet" href="/auth/forgot-password">Forgot password?</Link></p>}<button className="btn btn--primary" disabled={busy || (mode === 'sign-up' && joinMode === 'start' && !confirmedNewChurch)}>{busy ? 'Working...' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button></form>{notice && <p className="auth-description" role="status">{notice}</p>}{message && <p className="auth-description" role="status">{message}</p>}<p className="auth-description">{mode === 'sign-in' ? 'New here? ' : 'Already have an account? '}<Link className="btn btn--quiet" href={mode === 'sign-in' ? '/auth/sign-up' : '/auth/sign-in'}>{mode === 'sign-in' ? 'Create an account' : 'Sign in'}</Link></p></div></main>
+  if (mode === 'sign-in') {
+    const noticeText = signInNoticeCopy(notice)
+    const resultText = signInMessageCopy(message)
+    const invalidLinkNotice = notice === 'That link is invalid or has expired. Please request a new one.'
+
+    return (
+      <AuthFrame
+        title="Sign in"
+        description="Use your email address or username."
+        backHref="/auth"
+        backLabel="Back to choices"
+        footer={<Link className="btn btn--quiet" href="/auth/sign-up">New here? Create an account</Link>}
+      >
+        <form className="auth-form auth-form--sign-in" onSubmit={submit} aria-busy={busy}>
+          {noticeText && <p
+            className={`auth-form__status${invalidLinkNotice ? ' error' : ''}`}
+            id="sign-in-notice"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ><span data-status-text>{noticeText}</span></p>}
+          <div className="field">
+            <label className="field__label" htmlFor="sign-in-identifier">Email or username</label>
+            <input
+              className="field__input"
+              id="sign-in-identifier"
+              name="identifier"
+              type="text"
+              required
+              value={identifier}
+              onChange={event => setIdentifier(event.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-describedby="sign-in-result"
+            />
+          </div>
+          <div className="field">
+            <label className="field__label" htmlFor="sign-in-password">Password</label>
+            <PasswordField
+              id="sign-in-password"
+              name="password"
+              label="password"
+              inputClassName="field__input"
+              value={password}
+              onChange={setPassword}
+              placeholder=""
+              autoComplete="current-password"
+              describedBy="sign-in-result"
+            />
+          </div>
+          <Link className="btn btn--quiet" href="/auth/forgot-password">Forgot password?</Link>
+          <button className="btn btn--primary" type="submit" disabled={busy} aria-busy={busy}>
+            <span aria-hidden={busy}>Sign in</span>
+            <span aria-hidden={!busy}>Signing in…</span>
+          </button>
+          <p
+            className={`auth-form__status${message ? ' error' : ''}`}
+            id="sign-in-result"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-reserve={SIGN_IN_RESULT_RESERVE}
+          ><span data-status-text>{resultText}</span></p>
+        </form>
+      </AuthFrame>
+    )
+  }
+
+  return <main className="page-wrap auth-page"><div className="auth-card card card--borderless"><span className="brand-glyph">B</span><h1 className="auth-title">{<>Make room <em>to listen.</em></>}</h1><p className="auth-description">{'Create your Berean account with email.'}</p><form className="auth-form" onSubmit={submit}>{mode === 'sign-up' && <><div className="auth-toggle" role="group" aria-label="How are you joining?"><button type="button" className={`btn btn--secondary${joinMode === 'join' ? ' active' : ''}`} aria-pressed={joinMode === 'join'} onClick={() => chooseJoinMode('join')}>Join with invite code</button><button type="button" className={`btn btn--secondary${joinMode === 'start' ? ' active' : ''}`} aria-pressed={joinMode === 'start'} onClick={() => chooseJoinMode('start')}>Start a new church</button></div><input className="field__input" required value={name} onChange={event => setName(event.target.value)} placeholder="Name" autoComplete="name" /><input className="field__input" value={username} onChange={event => { latestUsername.current = event.target.value; setUsername(event.target.value); setUsernameNote({ message: '', kind: null }) }} onBlur={handleUsernameBlur} placeholder="Username (optional)" autoComplete="username" />{usernameNote.message && <p className={`field-message ${usernameNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{usernameNote.message}</p>}{joinMode === 'join' ? <><input className="field__input" required value={inviteCode} onChange={event => { latestInvite.current = event.target.value; setInviteCode(event.target.value); setInviteNote({ message: '', kind: null }) }} onBlur={handleInviteBlur} placeholder="Invite code" autoComplete="off" />{inviteNote.message && <p className={`field-message ${inviteNote.kind === 'ok' ? 'ok' : 'error'}`} role="status">{inviteNote.message}</p>}</> : <><p className="auth-note">You&apos;re creating a new organization on Berean and will become its administrator. Only do this if you&apos;re setting up your own church, not joining an existing one.</p><input className="field__input" required value={orgName} onChange={event => setOrgName(event.target.value)} placeholder="Church name" autoComplete="organization" /><label className="auth-confirm"><input type="checkbox" required checked={confirmedNewChurch} onChange={event => setConfirmedNewChurch(event.target.checked)} /><span>I&apos;m setting up a new church</span></label></>}</>}<input className="field__input" required type="email" value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder="Email" autoComplete="email" /><PasswordField inputClassName="field__input" value={password} onChange={setPassword} placeholder="Password" autoComplete="new-password" /><button className="btn btn--primary" disabled={busy || (mode === 'sign-up' && joinMode === 'start' && !confirmedNewChurch)}>{busy ? 'Working...' : 'Create account'}</button></form>{notice && <p className="auth-description" role="status">{notice}</p>}{message && <p className="auth-description" role="status">{message}</p>}<p className="auth-description">{'Already have an account? '}<Link className="btn btn--quiet" href="/auth/sign-in">{'Sign in'}</Link></p></div></main>
 }

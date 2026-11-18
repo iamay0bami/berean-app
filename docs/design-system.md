@@ -1158,6 +1158,91 @@ password, and identical Account password-form before/after signatures at
 auth/session/RLS validation gate. Later approved copy amendments do not change
 any provider-message handling in this foundation pass.
 
+
+### 6.16 Auth — Pass 2 sign-in
+
+Sign-in now uses the existing `AuthFrame`: sole h1 `Sign in`, Hanken description
+`Use your email address or username.`, brand-only AuthHeader and a real
+`Back to choices` link to `/auth`. The form is cardless on mobile and contained
+from 768px. Signup retains its current DOM until Pass 3; recovery and Account
+are unchanged. AuthForm's original state and request/validation/redirect handlers
+remain shared and untouched, rather than copied into another form component.
+
+The two controls reuse `.field`, `.field__label` and `.field__input`, with unique
+`sign-in-identifier` and `sign-in-password` ids and associated visible labels.
+Email or username is text with username autocomplete, no autocapitalization and
+no spellcheck. Password uses the existing PasswordField with current-password
+autocomplete, empty placeholder and its unchanged required/minLength-6 and
+Show/Hide behavior. Both controls describe the persistent result region; a
+credential failure is not falsely attributed to just one field.
+
+`.auth-form--sign-in` is the only new form modifier. It resets the shared form's
+24px top margin because its heading already lives above the card. Its direct
+`.btn--quiet` link resets the shared submit width/minimum to an automatic width
+and the existing 44px target, then aligns toward the inline end for Forgot
+password. Existing typography and focus rules are reused. No token, motion,
+blur, font or dependency is added, and the existing reduced-motion rule remains.
+The cross-flow footer is one real `.btn--quiet` link, `New here? Create an
+account`, to `/auth/sign-up`.
+For sign-in only, `.auth-form--sign-in .password-toggle:focus-visible` uses
+`--space-1` for the inward outline offset, leaving opaque sunken input material
+on both sides of the ring rather than crowding the input border. It reuses the
+existing focus width/radius and leaves Account's ring and geometry unchanged.
+
+Pass 2b aligns quiet-link text edges only inside `.auth-page`. The real
+`.btn--quiet` inline padding is `var(--space-2)` (8px), so Back/footer compensate
+with negative inline-start margin and Forgot password with negative inline-end
+margin using that same token. From 768px the Back/footer margin also includes
+the card's existing `--space-6` inset, keeping their text aligned with the field
+labels inside the padded card. Forgot password drops only its invisible
+inline-end border so its text, not that transparent border, reaches the field
+right edge; no new length token or literal is introduced. The global quiet-link
+padding/borders are unchanged. Existing 44px minimum targets and focus rings
+remain, with the 24px page gutter providing room for the negative margins/rings.
+No signup, recovery or Account selector is changed.
+
+Notice and result remain independent `.auth-form__status` messages, both with
+polite live regions, `aria-atomic` and distinct ids. The notice paragraph renders
+only when its display-mapped server-prop text is non-empty and has no
+`data-reserve`: it is known at render, so an absent notice creates no empty slot.
+Its invalid-link `.error` treatment remains. The RESULT below the submit button
+always stays mounted with its unchanged `data-reserve`/`data-status-text` pattern
+and 64px minimum; longer unknown errors or enlarged text grow rather than clip.
+A present notice retains the shared status styling. Both messages can appear
+together; neither is replaced with `notice || result`.
+The form and primary button expose pending state with `aria-busy`; native
+button disabling stays tied to the existing busy state. Idle `Sign in` and
+pending `Signing in…` labels share the existing reserved grid cell; only the
+active label is exposed to assistive technology.
+
+Display mapping is exact and client-only; the Server Action and page return
+strings, including invalid-link precedence over reset, remain unchanged:
+
+| Existing string matched | Sign-in display |
+| --- | --- |
+| `Invalid email/username or password` | `That email or username and password don't match. Check both and try again.` |
+| `Please confirm your email before signing in — check your inbox.` | `Confirm your email before signing in. Check your inbox.` |
+| `That link is invalid or has expired. Please request a new one.` | `That link is invalid or has expired. Request a new link.` |
+| `Password updated — sign in with your new password.` | `Password updated. Sign in with your new password.` |
+
+Other returned error strings remain unchanged. The now-unreachable legacy
+sign-in JSX arms are retired in place without changing the signup rendering.
+There are no remaining sign-in-only legacy CSS rules to remove after Pass 1;
+shared card, description, form, field, status and password rules remain in use.
+No new catch/finally, retry, submit guard, request or validation rule is added.
+
+Pass 2 evidence lives only in gitignored
+`.claude/evidence/auth-restyle/pass-2/`: at most eight labelled synthetic
+screenshots, raster samples with coordinates, and before/after Account signatures
+at 360/1024 in both themes. The 320px capture may combine forced input
+focus-visible styling with actual keyboard toggle focus; this is labelled a
+synthetic simultaneous-focus fixture, not real focus behavior. The 1024px
+pending/notice/result fixture is likewise synthetic: the real unchanged submit
+handler clears the previous result at request start. Fixtures never ship as
+production routes or alter production props/handlers to manufacture those states.
+Native keyboard/validation and accessibility-tree checks are reported separately
+from synthetic state styling and developer signed-in session/RLS sign-off.
+
 ---
 
 ## 7. Imagery — generated cloth, not photographs
