@@ -1243,6 +1243,89 @@ production routes or alter production props/handlers to manufacture those states
 Native keyboard/validation and accessibility-tree checks are reported separately
 from synthetic state styling and developer signed-in session/RLS sign-off.
 
+
+### 6.17 Auth — Pass 3 fixed Join and Start routes
+
+Signup is two routes with one AuthForm implementation and one unchanged submit
+request: `/auth/sign-up` is fixed Join mode and preserves `?invite=` prefill plus
+its mount-time validation; `/auth/start-a-new-church` is fixed Start mode and
+mirrors the existing server session guard, redirecting a signed-in visitor to
+`/home`. `initialJoinMode` accepts `join` or `start` and defaults to `join`; it is
+an immutable presentation input, not client state. The old mode switch,
+`chooseJoinMode`, `.auth-toggle` and its active/sibling rules are removed. Request
+metadata remains mutually exclusive: Join sends `invite_code`; Start sends
+`founding_org_name` and creates the existing required confirmation.
+
+Both routes use AuthFrame, Back to choices and the Pass 2 cardless-mobile /
+contained-from-768px composition. Join is `Join with an invite code` with
+`Create your account using the code from your church admin.` Start is `Start a
+new church` with `Create a Berean space for your church.` The chooser now links
+Start directly to `/auth/start-a-new-church`; its interim hint and description
+association are removed. Join cross-links to Start and Sign in. Start cross-links
+to Join and Sign in. These are real `.btn--quiet` links and inherit the existing
+auth text-edge alignment.
+
+The common fields are associated `.field` groups using visible labels and
+`.field__input`: Name (`name`), optional Username (`username`, no capitalization
+or spelling), Email (`email`, email input mode, no capitalization or spelling)
+and Password (`new-password`, unchanged required/minLength 6 and Show/Hide).
+Username has the fixed hint `Use 3–20 characters. Start with a letter and use
+lowercase letters, numbers or underscores.` Password says `Use at least 6
+characters.` Join inserts Invite code (`autocomplete="off"`, text input mode,
+no capitalization or spelling) with `Ask your church admin for an invite code.`
+The displayed invite value is never case-transformed; existing trim/uppercase is
+used only for validation/submission. Start inserts Church name
+(`organization`), then the founder explanation, native required confirmation
+and its unchecked reason. The wrapping `.auth-confirm` row is at least 44px;
+`.auth-confirm__input` is a native 24px checkbox and `.auth-confirm__text` wraps.
+
+Auth spacing deliberately has no speculative status bands. Username and invite
+`.field__status` paragraphs mount only when text exists and have no reserve or
+minimum block size. The auth form result also mounts only when text exists.
+This mount-on-change `role="status"`, polite, atomic pattern keeps a live region
+when there is an announcement while an empty state contributes neither height
+nor grid item/gap. Sign-in adopts the same conditional RESULT; its NOTICE was
+already conditional. Settings/Account retain their existing always-mounted,
+`data-reserve`, 48px field and 64px form status rules unchanged. This split is
+implemented with Settings-only reserve selectors plus auth-only status color,
+font and margin declarations—never a global primitive change.
+
+`.auth-form--signup` resets the inherited top margin like sign-in. Fields remain
+separate direct grid groups with `--space-4` between groups and `--space-2`
+inside each field. `.auth-founder` and `.auth-footer` are ordinary grid groups;
+the footer uses `--space-2` so its two links remain one related block without
+the earlier dead vertical space. The submit stays full width. Its idle/pending
+labels share the existing two-label grid: Join `Create account` /
+`Creating account…`; Start `Create church and account` / `Creating church…`.
+Start retains the existing disabled condition while unchecked, with the visible
+reason `Confirm below that you're setting up a new church before creating your
+account.` No new motion, token, font, dependency, blur, request or validation
+predicate is added.
+
+Client display mapping is exact where it receives a bounded existing value:
+
+| Existing value or provider branch | Signup display |
+| --- | --- |
+| `Usernames are 3–20 characters, start with a letter, and use only lowercase letters, numbers, and underscores.` | `Use 3–20 characters. Start with a letter and use lowercase letters, numbers or underscores.` |
+| `Username is available.` | unchanged |
+| `That username is already taken.` | `That username is taken. Try another.` |
+| `Enter your invite code.` | unchanged |
+| `Invite code accepted.` | unchanged |
+| `That invite code isn't valid.` | `That invite code isn't valid. Ask your church admin for a current code.` |
+| provider message containing `username already taken` or `duplicate key` | same username-taken display |
+| provider message containing `invalid invite code` | same invalid-invite display |
+| provider message containing `organization required` or `could not create organization` | `We couldn't create your church. Try a different name.` |
+| status 429, code/message `over_email_send_rate_limit` | `Too many sign-up emails right now. Wait a few minutes and try again.` |
+| any other signup provider error | `We couldn't create your account. Check your details and try again.` |
+| `Check your email to confirm your account.` | unchanged |
+
+Existing username/invite blur and submit checks, stale-response guards, trigger
+race mappings, metadata, callback destination and successful `/home` navigation
+remain. Evidence is synthetic and gitignored under
+`.claude/evidence/auth-restyle/pass-3/`; no fixture route or evidence file ships.
+Account geometry, sign-in and both recovery pages remain regression gates, while
+live signup/mail/session/RLS behavior stays for developer browser verification.
+
 ---
 
 ## 7. Imagery — generated cloth, not photographs

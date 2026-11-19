@@ -15,8 +15,7 @@ export default async function AuthChooserPage() {
       <nav className="auth-choices" aria-label="Get started">
         <Link className="btn btn--primary" href="/auth/sign-in">Sign in</Link>
         <Link className="btn btn--secondary" href="/auth/sign-up">Join with an invite code</Link>
-        <Link className="btn btn--secondary" href="/auth/sign-up" aria-describedby="auth-start-hint">Start a new church</Link>
-        <p className="field__hint" id="auth-start-hint">Choose “Start a new church” on the next screen.</p>
+        <Link className="btn btn--secondary" href="/auth/start-a-new-church">Start a new church</Link>
       </nav>
     </main>
   )

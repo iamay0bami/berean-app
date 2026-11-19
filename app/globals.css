@@ -355,7 +355,6 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 @keyframes loading-fill { 0% { transform: scaleX(0); } 55% { transform: scaleX(1); } 100% { transform: scaleX(1); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .loading-phrases p { transition: none; } .loading-line span { animation: none; transform: scaleX(.35); } }
 .password-field { position: relative; }.password-field input { padding-right: 42px; width: 100%; box-sizing: border-box; }.password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); padding: 8px; display: grid; place-items: center; }.field-message { font-size: 12px; margin: 6px 0 0; }.field-message.ok { color: var(--sage); }.field-message.error { color: var(--brick); }
-.auth-toggle { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-strong); }.auth-toggle button { border: 0; background: var(--paper); color: var(--ink); padding: 11px 12px; font-weight: 650; }.auth-toggle button + button { border-left: 1px solid var(--line-strong); }.auth-toggle button.active { background: var(--ink); color: var(--paper); }
 .member-list { display: grid; gap: 12px; margin-top: 8px; }.member-card { padding: 18px; display: grid; gap: 14px; }.member-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; }.member-card-head h2 { font-size: 21px; }.member-card-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; }.member-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }.member-control { display: grid; gap: 6px; flex: 1 1 170px; min-width: 0; }.member-control select { width: 100%; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); padding: 9px; }.muted-value { color: var(--muted); }
 .admin-nav { display: flex; gap: 18px; margin-bottom: 14px; font-size: 12px; font-weight: 650; }.admin-nav a { color: var(--muted); text-decoration: none; padding-bottom: 2px; }.admin-nav a.current { color: var(--ink); border-bottom: 2px solid var(--rail); }
 .invite-card { padding: 22px; display: grid; gap: 14px; }.invite-code-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }.invite-code { font: 26px var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: .14em; word-break: break-all; }.invite-copy { display: inline-flex; align-items: center; gap: 7px; width: auto; padding: 9px 13px; font-size: 12px; }
@@ -369,7 +368,6 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .class-roster { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 14px; }.roster-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }.roster-item { display: flex; align-items: center; gap: 12px; }.roster-item strong { flex: 1; font-size: 13px; min-width: 0; }.roster-toggle { color: var(--muted); font-size: 12px; }.roster-toggle[aria-expanded='true'] { color: var(--ink); }
 .member-controls .outline-button, .member-controls .text-action, .member-controls .danger-button { width: auto; }
 .auth-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
-.auth-card .auth-confirm { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; }.auth-card .auth-confirm input[type='checkbox'] { width: auto; flex: 0 0 auto; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
 .status-badge.draft { color: var(--brick); }.status-badge.published { color: var(--sage); }
 .class-form .body-field { min-height: 240px; }
 .class-form-actions .outline-button { width: auto; }
@@ -556,10 +554,10 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .settings-form-card { min-inline-size: 0; margin-block-start: var(--space-5); padding: var(--space-5); font-family: var(--font-interface), sans-serif; }
 .settings-form-card .card__title { margin: 0; }
 :is(.settings-form, .auth-form) { min-inline-size: 0; display: grid; gap: var(--space-4); margin-block-start: var(--space-5); }
-:is(.settings-form, .auth-form) .field__status { display: grid; min-block-size: var(--space-7); margin: 0; color: var(--text-muted); }
-:is(.settings-form, .auth-form) .field__status::before, :is(.settings-form__status, .auth-form__status)::before { content: attr(data-reserve); visibility: hidden; grid-area: 1 / 1; }
-:is(.settings-form, .auth-form) [data-status-text] { grid-area: 1 / 1; min-inline-size: 0; overflow-wrap: anywhere; }
-:is(.settings-form, .auth-form) .field__status.error, :is(.settings-form__status, .auth-form__status).error { color: var(--danger); }
+.settings-form .field__status { display: grid; min-block-size: var(--space-7); margin: 0; color: var(--text-muted); }
+.settings-form .field__status::before, .settings-form__status::before { content: attr(data-reserve); visibility: hidden; grid-area: 1 / 1; }
+.settings-form [data-status-text] { grid-area: 1 / 1; min-inline-size: 0; overflow-wrap: anywhere; }
+.settings-form .field__status.error, .settings-form__status.error, .auth-form .field__status.error, .auth-form__status.error { color: var(--danger); }
 .settings-form .field__input[readonly] { color: var(--text-muted); cursor: default; }
 :is(.settings-form, .auth-form) .password-field .field__input { padding-inline-end: calc(var(--touch-target) + var(--space-2)); }
 :is(.settings-form, .auth-form) .password-toggle { inset-inline-end: 0; inline-size: var(--touch-target); block-size: var(--touch-target); color: var(--text-muted); }
@@ -567,16 +565,25 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 :is(.settings-form, .auth-form) > .btn { display: inline-grid; justify-self: start; min-inline-size: min(100%, calc(var(--space-8) + var(--space-8) + var(--space-7))); max-inline-size: 100%; padding-block: var(--space-2); text-align: center; overflow-wrap: anywhere; }
 :is(.settings-form, .auth-form) > .btn > [aria-hidden] { grid-area: 1 / 1; min-inline-size: 0; }
 :is(.settings-form, .auth-form) > .btn > [aria-hidden='true'] { visibility: hidden; }
-:is(.settings-form__status, .auth-form__status) { display: grid; min-block-size: var(--space-8); margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; }
+.settings-form__status { display: grid; min-block-size: var(--space-8); margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; }
+.auth-form .field__status { min-block-size: 0; margin: 0; color: var(--text-muted); }
+.auth-form .field__status.ok { color: var(--community); }
+.auth-form__status { min-block-size: 0; margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; overflow-wrap: anywhere; }
 .auth-form > .btn { justify-self: stretch; inline-size: 100%; }
-.auth-form .auth-confirm { min-block-size: var(--touch-target); }
-.auth-form--sign-in { margin-block-start: 0; }
+:is(.auth-form--sign-in, .auth-form--signup) { margin-block-start: 0; }
 .auth-form--sign-in > .btn--quiet { justify-self: end; inline-size: auto; min-inline-size: var(--touch-target); }
 .auth-form--sign-in .password-toggle:focus-visible { outline-offset: calc(-1 * var(--space-1)); }
-.auth-page .auth-content > .btn--quiet { margin-inline-start: calc(-1 * var(--space-2)); }
+.auth-footer, .auth-founder { display: grid; gap: var(--space-2); min-inline-size: 0; }
+.auth-footer { justify-items: start; }
+.auth-founder .auth-note { color: var(--text-muted); font-size: var(--text-ui); line-height: 1.45; }
+.auth-confirm { display: flex; align-items: center; gap: var(--space-2); min-block-size: var(--touch-target); color: var(--text); font-size: var(--text-body); cursor: pointer; }
+.auth-confirm__input { inline-size: var(--space-5); block-size: var(--space-5); flex: 0 0 auto; margin: 0; accent-color: var(--accent-text); }
+.auth-confirm__input:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.auth-confirm__text { min-inline-size: 0; overflow-wrap: anywhere; }
+.auth-page .auth-content > .btn--quiet, .auth-page .auth-footer > .btn--quiet { margin-inline-start: calc(-1 * var(--space-2)); }
 .auth-page .auth-form--sign-in > .btn--quiet { margin-inline-end: calc(-1 * var(--space-2)); border-inline-end: none; }
 @media (min-width: 768px) {
-  .auth-page .auth-content > .btn--quiet { margin-inline-start: calc(var(--space-6) - var(--space-2)); }
+  .auth-page .auth-content > .btn--quiet, .auth-page .auth-footer > .btn--quiet { margin-inline-start: calc(var(--space-6) - var(--space-2)); }
 }
 
 
