@@ -1298,8 +1298,8 @@ the earlier dead vertical space. The submit stays full width. Its idle/pending
 labels share the existing two-label grid: Join `Create account` /
 `Creating account…`; Start `Create church and account` / `Creating church…`.
 Start retains the existing disabled condition while unchecked, with the visible
-reason `Confirm below that you're setting up a new church before creating your
-account.` No new motion, token, font, dependency, blur, request or validation
+reason `Tick the box above to confirm you're setting up a new church before
+creating your account.` No new motion, token, font, dependency, blur, request or validation
 predicate is added.
 
 Client display mapping is exact where it receives a bounded existing value:
@@ -1325,6 +1325,78 @@ remain. Evidence is synthetic and gitignored under
 `.claude/evidence/auth-restyle/pass-3/`; no fixture route or evidence file ships.
 Account geometry, sign-in and both recovery pages remain regression gates, while
 live signup/mail/session/RLS behavior stays for developer browser verification.
+
+
+### 6.18 Auth — Pass 4 password recovery
+
+ForgotPasswordForm and UpdatePasswordForm use AuthFrame, with the existing
+cardless-mobile / opaque-contained-from-768px composition. No route page,
+request, handler, validation predicate, sign-out call or destination changes.
+AuthFrame retains its default `/auth` Back to choices link; `backHref={null}`
+omits the link entirely, with no empty grid item. Existing sign-in, Join and
+Start callers retain their links. Update omits back navigation because a
+recovery session would redirect sign-in to Home, not remain on sign-in.
+
+Forgot has the sole h1 `Reset your password`, description `Enter your email to
+get a reset link.`, and one Back to sign in link to `/auth/sign-in`. The old
+Remembered it footer is removed. Its associated Email field uses
+`forgot-password-email`, `.field`, `.field__label`, `.field__input`, required
+email type, email input mode/autocomplete, no capitalization and no spelling.
+The full-width submit is `Send reset link` / `Sending…` in the existing stable
+two-label grid. The existing HTTP-429 branch, failure logging and generic
+non-enumerating confirmation for success AND non-429 provider errors remain.
+
+Update has the sole h1 `Choose a new password` and description `Set a new
+password for your Berean account.` The visible New password and Confirm password
+labels associate with `update-password-new` and `update-password-confirm`.
+Both reuse PasswordField's existing required/minLength-6, new-password
+autocomplete and Show/Hide names (`password` and `confirm password`); no
+PasswordField implementation changes. The first field describes
+`update-password-hint`: `Use at least 6 characters.` Only a non-empty differing
+confirmation receives the mounted `update-password-mismatch` status,
+`aria-invalid` and a matching `aria-describedby`. Its existing comparison and
+submit guard remain unchanged. The stable submit labels are `Update password` /
+`Updating…`. A successful update still awaits signOut and navigates to
+`/auth/sign-in?reset=1`, without clearing busy during navigation.
+
+Both forms use `.auth-form--recovery`. This modifier joins the existing
+sign-in/signup top-margin reset; it also joins sign-in's existing inset focus
+ring rule so recovery toggles keep their ring within the input fill. No new
+rule values, tokens, fonts, dependencies, motion or blur are introduced.
+Field groups keep the existing 16px grid gap; labels, controls, hints and
+field-level messages retain the 8px internal gap. Result statuses live inside
+the form after submit. All messages mount only with text as polite, atomic
+`role="status"` regions, without data-reserve, minimum height or an empty grid
+item. Assistive-technology announcement behavior still requires validation on
+the developer's target screen reader; mounting a region with text is the
+explicit approved auth pattern. Account/Settings status reservations remain
+unchanged. The forms and submit controls expose busy state with aria-busy.
+
+Client-only display mapping leaves the submit handlers byte-for-byte unchanged:
+
+| Existing string or branch | Recovery display |
+| --- | --- |
+| `If an account exists for that email, a reset link has been sent.` | unchanged, success style |
+| `Too many reset requests. Please wait a few minutes and try again.` | `Too many reset requests. Wait a few minutes and try again.`, error style |
+| `Passwords do not match.` | `Passwords don't match. Enter the same password in both fields.` |
+| Update provider message containing `new password should be different from the old password` (case-insensitive) | provider message preserved verbatim, including punctuation |
+| Any other returned update error | `We couldn't update your password. Try again.` |
+
+Recovery's old nested brand glyph, italic heading fragment, bare input and
+placeholder labels, loose result paragraphs and remembered-it footer are
+retired. `.small-link` has no remaining production consumer and is removed from
+its grouped and standalone rules; `.field-message.ok` is likewise unused.
+Shared `.brand-glyph`, `.paper-card`, `.primary-button`, `.text-action`,
+`.field-message` and `.field-message.error` rules remain for branding, error,
+admin, authoring, discussion and sermon consumers. No unrelated rule is deleted.
+
+Synthetic fixtures, at most eight labelled captures, raster samples, gap
+measurements and regression signatures live only in gitignored
+`.claude/evidence/auth-restyle/pass-4/`. Account and sign-in/Join are exact
+before/after gates; Start's only allowed change is the approved unchecked-reason
+copy (and wrapping it necessarily causes). Live recovery-session, reset mail,
+password update, sign-out and screen-reader announcement validation remain
+explicit developer browser gates; no real reset/password change is submitted.
 
 ---
 

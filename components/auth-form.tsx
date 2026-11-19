@@ -321,7 +321,7 @@ export default function AuthForm({
               <input className="auth-confirm__input" type="checkbox" name="confirm-new-church" required checked={confirmedNewChurch} onChange={event => setConfirmedNewChurch(event.target.checked)} />
               <span className="auth-confirm__text">I&apos;m setting up a new church</span>
             </label>
-            {!confirmedNewChurch && <p className="field__hint">Confirm below that you&apos;re setting up a new church before creating your account.</p>}
+            {!confirmedNewChurch && <p className="field__hint">Tick the box above to confirm you&apos;re setting up a new church before creating your account.</p>}
           </div>
         </> : <div className="field">
           <label className="field__label" htmlFor="join-invite-code">Invite code</label>

@@ -13,7 +13,7 @@ export function AuthFrame({
   title: string
   description: string
   children: ReactNode
-  backHref?: string
+  backHref?: string | null
   backLabel?: string
   footer?: ReactNode
 }) {
@@ -21,7 +21,7 @@ export function AuthFrame({
     <main className="page-wrap auth-page auth-page--flow">
       <AuthHeader />
       <div className="auth-content">
-        <Link className="btn btn--quiet" href={backHref}>{backLabel}</Link>
+        {backHref && <Link className="btn btn--quiet" href={backHref}>{backLabel}</Link>}
         <header className="auth-intro">
           <h1 className="auth-title">{title}</h1>
           <p className="auth-description">{description}</p>
