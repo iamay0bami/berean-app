@@ -69,11 +69,6 @@ function signupDisplayCopy(message: string) {
       return 'Use 3–20 characters. Start with a letter and use lowercase letters, numbers or underscores.'
     case 'That username is already taken.':
       return 'That username is taken. Try another.'
-    case 'Username is available.':
-    case 'Enter your invite code.':
-    case 'Invite code accepted.':
-    case 'Check your email to confirm your account.':
-      return message
     case "That invite code isn't valid.":
       return "That invite code isn't valid. Ask your church admin for a current code."
     default:
@@ -230,7 +225,7 @@ export default function AuthForm({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-          ><span data-status-text>{noticeText}</span></p>}
+          >{noticeText}</p>}
           <div className="field">
             <label className="field__label" htmlFor="sign-in-identifier">Email or username</label>
             <input
@@ -272,7 +267,7 @@ export default function AuthForm({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-          ><span data-status-text>{resultText}</span></p>}
+          >{resultText}</p>}
         </form>
       </AuthFrame>
     )

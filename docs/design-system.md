@@ -1102,26 +1102,24 @@ illustration, social login, legal agreement, new font or dependency is added.
 visitors go to `/home`, matching the existing auth entry guards. Its sole h1 is
 `Welcome to Berean`, with `A place to read and learn with your church.` below.
 Three real links are Sign in, Join with an invite code and Start a new church.
-For Pass 1 both signup choices go to the existing `/auth/sign-up`; the founder
-choice explicitly tells visitors to choose the existing Start a new church
-switch on the next screen. The dedicated founder route belongs to a later pass.
+Join targets `/auth/sign-up`; Start targets `/auth/start-a-new-church`.
+There is no interim hint or mode switch; section 6.17 owns the fixed routes.
 The chooser does not mount AppShell, AuthHeader or bottom navigation.
 
 `AuthFrame` in `components/auth-presentation.tsx` is the reusable normal-flow
 composition for subsequent migrations: existing brand-only AuthHeader, real
 Back link, heading/description above one `.auth-card.card.card--borderless`,
-children and an optional footer. Pass 1 does not replace the existing forms
-with this frame or change their handlers, validation, copy or redirects.
+children and an optional footer. All auth forms now use this frame; Update
+passes a null back destination as documented in section 6.18.
 
 The foundation prepares all three existing auth form consumers together:
 class-based headings, descriptions, forms and links; `.field__input` on text
 controls, including PasswordField's existing `inputClassName` prop; shared
-button primitives. Their placeholder-only labels remain until each later form
-pass. Only after every consumer has its hooks are the conflicting
+button primitives. All forms now have visible associated labels. The conflicting
 `.auth-card h1`, `.auth-card > p`, `.auth-card form`, `.auth-card input` and
-`.auth-card a` rules retired in place. No specificity patches or duplicate
-control declarations are added. Existing mode/confirmation selectors remain
-until their dedicated passes; shared legacy classes used elsewhere survive.
+`.auth-card a` rules are retired in place. No specificity patches or duplicate
+control declarations are added. The old mode selectors are gone; native
+confirmation uses the section 6.17 hooks. Shared legacy consumers survive.
 
 Auth retains the existing 720px `.page-wrap`, with the 24px gutter selector
 widened in place. `.auth-card` reuses the existing 34rem `--measure`, zero mobile
@@ -1129,7 +1127,7 @@ inner padding and `--space-6` padding from 768px. Its mobile variant has no
 visible card fill, border or shadow; desktop uses the widened shared borderless
 card rule. Long forms grow and scroll; no fixed card height or internal scroller.
 
-| Hook | Pass 1 contract |
+| Hook | Current auth contract |
 | --- | --- |
 | `.auth-page` | Existing minimum `100vh`/`100dvh` fallback, 24px gutters, token block spacing plus top/bottom safe areas; no nav clearance |
 | `.auth-page--welcome` | Cardless flex column; identity uses available space, destinations remain ordinary-flow content at the foot |
@@ -1138,9 +1136,9 @@ card rule. Long forms grow and scroll; no fixed card height or internal scroller
 | `.auth-intro` | Centered heading/description group, `--space-2` gap |
 | `.auth-title` | Widened Classes/Settings display role: Berean Serif 600 normal, `--text-display`, no synthesis; auth wraps at 1.2 leading |
 | `.auth-description` | Hanken, `--text-body`, 1.55 leading, `--text-muted`, wrapping; no placeholder label substitute |
-| `.auth-choices` | Full-width existing button links, `--space-3` gaps, `--space-7` separation from identity; final hint reuses `.field__hint` |
+| `.auth-choices` | Full-width existing button links, `--space-3` gaps, `--space-7` separation from identity; no interim hint |
 | `.auth-form` | Widened Settings grid/status/password/pending extension points, unchanged specificity; Hanken, `--space-4` gap; auth submit full width |
-| `.auth-form__status` | Widened existing 64px-minimum form-status/reservation/error rules; extension point only, not a new Pass 1 error implementation |
+| `.auth-form__status` | Conditional polite/atomic message with no reservation or minimum height; Account/Settings alone retain their reservation rules |
 
 Account's status reservation, password clearance, 44px toggle/focus and pending
 button selectors are widened with `:is(.settings-form, .auth-form)` in place.
@@ -1164,8 +1162,8 @@ any provider-message handling in this foundation pass.
 Sign-in now uses the existing `AuthFrame`: sole h1 `Sign in`, Hanken description
 `Use your email address or username.`, brand-only AuthHeader and a real
 `Back to choices` link to `/auth`. The form is cardless on mobile and contained
-from 768px. Signup retains its current DOM until Pass 3; recovery and Account
-are unchanged. AuthForm's original state and request/validation/redirect handlers
+from 768px. Signup and recovery share this composition as documented in
+sections 6.17–6.18; Account remains unchanged. AuthForm's original state and request/validation/redirect handlers
 remain shared and untouched, rather than copied into another form component.
 
 The two controls reuse `.field`, `.field__label` and `.field__input`, with unique
@@ -1173,10 +1171,10 @@ The two controls reuse `.field`, `.field__label` and `.field__input`, with uniqu
 Email or username is text with username autocomplete, no autocapitalization and
 no spellcheck. Password uses the existing PasswordField with current-password
 autocomplete, empty placeholder and its unchanged required/minLength-6 and
-Show/Hide behavior. Both controls describe the persistent result region; a
+Show/Hide behavior. Both controls describe the result region; a
 credential failure is not falsely attributed to just one field.
 
-`.auth-form--sign-in` is the only new form modifier. It resets the shared form's
+`.auth-form--sign-in` resets the shared form's
 24px top margin because its heading already lives above the card. Its direct
 `.btn--quiet` link resets the shared submit width/minimum to an automatic width
 and the existing 44px target, then aligns toward the inline end for Forgot
@@ -1184,7 +1182,7 @@ password. Existing typography and focus rules are reused. No token, motion,
 blur, font or dependency is added, and the existing reduced-motion rule remains.
 The cross-flow footer is one real `.btn--quiet` link, `New here? Create an
 account`, to `/auth/sign-up`.
-For sign-in only, `.auth-form--sign-in .password-toggle:focus-visible` uses
+Sign-in and recovery's scoped `.password-toggle:focus-visible` rule uses
 `--space-1` for the inward outline offset, leaving opaque sunken input material
 on both sides of the ring rather than crowding the input border. It reuses the
 existing focus width/radius and leaves Account's ring and geometry unchanged.
@@ -1206,8 +1204,8 @@ polite live regions, `aria-atomic` and distinct ids. The notice paragraph render
 only when its display-mapped server-prop text is non-empty and has no
 `data-reserve`: it is known at render, so an absent notice creates no empty slot.
 Its invalid-link `.error` treatment remains. The RESULT below the submit button
-always stays mounted with its unchanged `data-reserve`/`data-status-text` pattern
-and 64px minimum; longer unknown errors or enlarged text grow rather than clip.
+mounts only when text exists, without data-reserve, a minimum height or an
+empty grid gap. This supersedes the Pass 2 reservation; longer errors still wrap.
 A present notice retains the shared status styling. Both messages can appear
 together; neither is replaced with `notice || result`.
 The form and primary button expose pending state with `aria-busy`; native
@@ -1397,6 +1395,79 @@ before/after gates; Start's only allowed change is the approved unchecked-reason
 copy (and wrapping it necessarily causes). Live recovery-session, reset mail,
 password update, sign-out and screen-reader announcement validation remain
 explicit developer browser gates; no real reset/password change is submitted.
+
+
+### 6.19 Auth — Pass 5 static leaf loaders and cleanup
+
+The installed Next loading.md and route-groups.md contracts were read before
+implementation. Each leaf loading.tsx is a zero-argument Server Component:
+it wraps that segment's page and descendants in Next's Suspense boundary, not
+the same segment's layout/template/error. No loader reads params, search
+params, pathname, cookies or authentication. Route groups do not change URLs;
+`app/auth/(welcome)/loading.tsx` therefore serves only the chooser at `/auth`.
+The other five leaves are sign-in, sign-up (Join), start-a-new-church,
+forgot-password and update-password. No auth layout, parent/callback loader,
+AppShell or bottom navigation is added; the root branded loader is unchanged.
+
+AuthLoading in components/auth-presentation.tsx is server-compatible and takes
+only a fixed chooser/sign-in/join/start/forgot/update variant. It renders one
+polite, atomic Loading… status in a visually hidden `.sr-only` paragraph outside
+an aria-hidden inert wrapper. All static geometry is inside that wrapper:
+empty divs only, with no links, buttons, inputs, SVGs, brand words, values or
+focus stops. Loader status text is available to assistive technology but is
+not painted, so it requires no visible-text contrast sample.
+
+Geometry reuses `.auth-page`, its welcome/flow modifiers, `.auth-content`,
+`.auth-intro`, `.auth-card`, `.card--borderless`, `.auth-header`, `.brand-mark`
+and an empty `.brand-glyph`, `.field`, `.field__label`, `.field__input`,
+`.password-field`, `.password-toggle`, `.auth-form` and the existing button
+classes on non-interactive divs. This preserves the real 24px gutters, 34rem
+measure, normal-flow centering, mobile cardless state and 768px contained card.
+The existing skeleton-block :is() scope includes `.auth-skeleton`; no second
+fill system is added. Geometry and pseudo-elements have animation:none and
+transition:none regardless of motion preference.
+
+| Auth skeleton hook | Geometry contract |
+| --- | --- |
+| `.auth-skeleton` and six fixed variant modifiers | Hidden/inert ownership and route-specific initial-state geometry |
+| `.auth-skeleton__title` / `__description` | Existing display/body size and 1.2/1.55 leading; fixed initial line counts, one line from 768px |
+| `.auth-skeleton__line` | Short neutral bar within a full-sized text footprint; never words or data |
+| `.auth-skeleton__label` / `__strut` | Label size × 1.3; empty input line strut uses body size × 1.45 so existing padding/borders determine the real control height |
+| `.auth-skeleton__hint` and `--long` | UI size × 1.55; username and unchecked founder reason occupy two initial lines |
+| `.auth-skeleton__note` | Founder UI size × 1.45, three mobile / two desktop initial lines |
+| `.auth-skeleton__back`, `__forgot`, `__footer` | Fixed initial-copy quiet-link widths through existing UI-size tokens; real margins/padding/44px target reused |
+| `.auth-skeleton__toggle` | Existing 44px toggle footprint, neutral opaque fill and no icon |
+
+Join and Start have separate initial layouts. Start includes its note,
+unchecked checkbox footprint and reason. Sign-in includes Forgot password and
+its one-link footer. Update has no back link or footer. Chooser has only the
+centered identity footprint and three bottom choice shapes. Loaders match
+INITIAL state only: they cannot know a sign-in notice, prefilled-invite
+validation, client error, mismatch, busy state or checked founder confirmation.
+Fixed line counts are not a substitute for live wrapping at arbitrary widths
+or text-resize settings; rectangle evidence covers 360/768 in both themes with
+production fonts and no desktop scrollbar artifact.
+
+Cleanup removes four redundant signupDisplayCopy identity cases (the default
+already returns those values unchanged) and sign-in's two obsolete
+`data-status-text` spans, whose CSS consumer is Settings-only. No handler,
+request, displayed copy or Account/Settings rule changes. There are no unused
+imports/variables in the four scoped components and no additional dead auth
+CSS selector proven safe to delete. Shared branding, card/password primitives,
+auth notes, status, quiet-link alignment and form-grid rules remain for real
+consumers; unrelated CSS is not cleaned up.
+
+Evidence is gitignored in `.claude/evidence/auth-restyle/pass-5/`: at most eight
+labelled SYNTHETIC composites, loader beside real screen, all light theme (six
+at 360, plus sign-in/Join at 768). Dark theme has rectangle/computed-state checks
+only, never claimed screenshot evidence. Every variant is checked for one
+status outside inert geometry, zero focusable elements, no computed motion,
+no nav and matching header/title/field/submit/footer footprints at 360/768 in
+both themes. Account signatures remain a 360/1024 both-theme gate. Final QA
+includes real tsc --noEmit, npm build, build route-size availability, branch CSS
+byte/file deltas and explicit lint-tool availability. Live browser/session/RLS
+validation belongs to the developer; no real submission is made and synthetic
+geometry is not live sign-off.
 
 ---
 

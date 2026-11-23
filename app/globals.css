@@ -791,7 +791,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 @media (prefers-reduced-transparency: reduce) { .cloth-caption--class { background: var(--glass-solid); } }
 
 /* Static route-local loading geometry. No shimmer, fake links or counts. */
-:is(.classes-skeleton, .home-skeleton, .profile-skeleton, .settings-skeleton) .skeleton-block { display: block; background: var(--bg-sunken); border-radius: var(--radius-xs); }
+:is(.classes-skeleton, .home-skeleton, .profile-skeleton, .settings-skeleton, .auth-skeleton) .skeleton-block { display: block; background: var(--bg-sunken); border-radius: var(--radius-xs); }
 .classes-skeleton__title { inline-size: 54%; block-size: var(--text-display); }
 .classes-skeleton__heading { inline-size: 46%; block-size: var(--text-heading); margin-block-end: var(--space-4); }
 .classes-skeleton__cover { inline-size: 100%; aspect-ratio: 3 / 4; }
@@ -843,3 +843,36 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .cloth-node-count--limit { color: var(--danger); }
 .cloth-label { font: 600 var(--text-micro)/1.2 var(--font-sans); color: var(--text-muted); }
 .cloth-note { color: var(--text-muted); max-inline-size: 42rem; font-size: var(--text-ui); }
+
+/* Auth leaf loaders — fixed initial state; all geometry is inert and static. */
+.auth-skeleton, .auth-skeleton :where(*), .auth-skeleton :where(*)::before, .auth-skeleton :where(*)::after { animation: none; transition: none; }
+.auth-skeleton__title, .auth-skeleton__description, .auth-skeleton__label, .auth-skeleton__hint, .auth-skeleton__note { display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); }
+.auth-skeleton__line { inline-size: 70%; block-size: calc(var(--text-ui) * .75); flex: 0 0 auto; }
+.auth-skeleton__line + .auth-skeleton__line { inline-size: 54%; }
+.auth-skeleton__title, .auth-skeleton__description { align-items: center; }
+.auth-skeleton__title { block-size: calc(var(--text-display) * 1.2 * 2); }
+.auth-skeleton__title .auth-skeleton__line { block-size: calc(var(--text-display) * .65); }
+.auth-skeleton--sign-in .auth-skeleton__title { block-size: calc(var(--text-display) * 1.2); }
+.auth-skeleton__description { block-size: calc(var(--text-body) * 1.55); }
+:is(.auth-skeleton--join, .auth-skeleton--update) .auth-skeleton__description { block-size: calc(var(--text-body) * 1.55 * 2); }
+.auth-skeleton__label { block-size: calc(var(--text-label) * 1.3); }
+.auth-skeleton__label .auth-skeleton__line { inline-size: 36%; block-size: calc(var(--text-label) * .8); }
+.auth-skeleton__strut { block-size: calc(var(--text-body) * 1.45); }
+.auth-skeleton__hint { block-size: calc(var(--text-ui) * 1.55); }
+.auth-skeleton__hint--long { block-size: calc(var(--text-ui) * 1.55 * 2); }
+.auth-skeleton__note { block-size: calc(var(--text-ui) * 1.45 * 3); }
+.auth-skeleton .auth-header .auth-skeleton__line { inline-size: calc(var(--space-7) + var(--space-6)); }
+.auth-skeleton .auth-confirm .auth-skeleton__line { inline-size: 70%; }
+.auth-skeleton__back { inline-size: calc(var(--text-ui) * 8.4); }
+.auth-skeleton--forgot .auth-skeleton__back { inline-size: calc(var(--text-ui) * 7.887); }
+.auth-skeleton .auth-skeleton__forgot { inline-size: calc(var(--text-ui) * 9.34); }
+.auth-skeleton__footer { inline-size: calc(var(--text-ui) * 14.772); }
+.auth-skeleton .auth-footer > .btn { inline-size: 80%; }
+.auth-skeleton .auth-footer > .btn + .btn { inline-size: 64%; }
+.auth-skeleton .auth-skeleton__toggle { background: var(--line); }
+@media (min-width: 768px) {
+  .auth-skeleton__title { block-size: calc(var(--text-display) * 1.2); }
+  .auth-skeleton__title .auth-skeleton__line + .auth-skeleton__line, .auth-skeleton__description .auth-skeleton__line + .auth-skeleton__line, .auth-skeleton__note .auth-skeleton__line + .auth-skeleton__line + .auth-skeleton__line { display: none; }
+  :is(.auth-skeleton--join, .auth-skeleton--update) .auth-skeleton__description { block-size: calc(var(--text-body) * 1.55); }
+  .auth-skeleton__note { block-size: calc(var(--text-ui) * 1.45 * 2); }
+}
