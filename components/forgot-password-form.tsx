@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AuthFrame } from '@/components/auth-presentation'
 import { FormEvent, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -25,5 +25,42 @@ export default function ForgotPasswordForm() {
     setMessage(GENERIC_MESSAGE)
   }
 
-  return <main className="page-wrap auth-page"><div className="auth-card paper-card"><span className="brand-glyph">B</span><h1>Reset your <em>password.</em></h1><p>Enter your email to get a reset link.</p><form onSubmit={submit}><input required type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="Email" autoComplete="email" /><button className="primary-button" disabled={busy}>{busy ? 'Working...' : 'Send reset link'}</button></form>{failure && <p className="field-message error" role="status">{failure}</p>}{message && <p className="field-message" role="status">{message}</p>}<p>Remembered it? <Link className="text-action" href="/auth/sign-in">Sign in</Link></p></div></main>
+  const failureText = failure === RATE_LIMIT_MESSAGE
+    ? 'Too many reset requests. Wait a few minutes and try again.'
+    : failure
+
+  return (
+    <AuthFrame
+      title="Reset your password"
+      description="Enter your email to get a reset link."
+      backHref="/auth/sign-in"
+      backLabel="Back to sign in"
+    >
+      <form className="auth-form auth-form--recovery" onSubmit={submit} aria-busy={busy}>
+        <div className="field">
+          <label className="field__label" htmlFor="forgot-password-email">Email</label>
+          <input
+            className="field__input"
+            id="forgot-password-email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+            value={email}
+            onChange={event => setEmail(event.target.value)}
+            aria-describedby={failure || message ? 'forgot-password-result' : undefined}
+          />
+        </div>
+        <button className="btn btn--primary" type="submit" disabled={busy} aria-busy={busy}>
+          <span aria-hidden={busy}>Send reset link</span>
+          <span aria-hidden={!busy}>Sending…</span>
+        </button>
+        {failure && <p className="auth-form__status error" id="forgot-password-result" role="status" aria-live="polite" aria-atomic="true">{failureText}</p>}
+        {message && <p className="auth-form__status" id="forgot-password-result" role="status" aria-live="polite" aria-atomic="true">{message}</p>}
+      </form>
+    </AuthFrame>
+  )
 }

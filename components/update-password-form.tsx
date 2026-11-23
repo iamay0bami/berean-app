@@ -3,6 +3,12 @@
 import { FormEvent, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import PasswordField from '@/components/password-field'
+import { AuthFrame } from '@/components/auth-presentation'
+
+function updatePasswordMessageCopy(message: string) {
+  if (message.toLowerCase().includes('new password should be different from the old password')) return message
+  return "We couldn't update your password. Try again."
+}
 
 export default function UpdatePasswordForm() {
   const [password, setPassword] = useState('')
@@ -26,5 +32,49 @@ export default function UpdatePasswordForm() {
     window.location.assign('/auth/sign-in?reset=1')
   }
 
-  return <main className="page-wrap auth-page"><div className="auth-card paper-card"><span className="brand-glyph">B</span><h1>Choose a new <em>password.</em></h1><p>Set a new password for your Berean account.</p><form onSubmit={submit}><PasswordField value={password} onChange={setPassword} placeholder="New password" autoComplete="new-password" /><PasswordField value={confirm} onChange={setConfirm} placeholder="Confirm password" autoComplete="new-password" label="confirm password" />{mismatch && <p className="field-message error" role="status">Passwords do not match.</p>}<button className="primary-button" disabled={busy}>{busy ? 'Working...' : 'Update password'}</button></form>{message && <p role="status">{message}</p>}</div></main>
+  return (
+    <AuthFrame
+      title="Choose a new password"
+      description="Set a new password for your Berean account."
+      backHref={null}
+    >
+      <form className="auth-form auth-form--recovery" onSubmit={submit} aria-busy={busy}>
+        <div className="field">
+          <label className="field__label" htmlFor="update-password-new">New password</label>
+          <PasswordField
+            id="update-password-new"
+            name="new-password"
+            inputClassName="field__input"
+            value={password}
+            onChange={setPassword}
+            placeholder=""
+            autoComplete="new-password"
+            describedBy={message ? 'update-password-hint update-password-result' : 'update-password-hint'}
+          />
+          <p className="field__hint" id="update-password-hint">Use at least 6 characters.</p>
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor="update-password-confirm">Confirm password</label>
+          <PasswordField
+            id="update-password-confirm"
+            name="confirm-password"
+            inputClassName="field__input"
+            value={confirm}
+            onChange={setConfirm}
+            placeholder=""
+            autoComplete="new-password"
+            label="confirm password"
+            describedBy={mismatch ? 'update-password-mismatch' : undefined}
+            invalid={mismatch}
+          />
+          {mismatch && <p className="field__status error" id="update-password-mismatch" role="status" aria-live="polite" aria-atomic="true">Passwords don&apos;t match. Enter the same password in both fields.</p>}
+        </div>
+        <button className="btn btn--primary" type="submit" disabled={busy} aria-busy={busy}>
+          <span aria-hidden={busy}>Update password</span>
+          <span aria-hidden={!busy}>Updating…</span>
+        </button>
+        {message && <p className="auth-form__status error" id="update-password-result" role="status" aria-live="polite" aria-atomic="true">{updatePasswordMessageCopy(message)}</p>}
+      </form>
+    </AuthFrame>
+  )
 }
