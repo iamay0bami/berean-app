@@ -66,14 +66,14 @@ export default function AccountDetailsForm({ initialName, initialUsername, email
       <form className="settings-form" onSubmit={submit} noValidate aria-busy={busy}>
         <div className="field">
           <label className="field__label" htmlFor="account-name">Name</label>
-          <input className="field__input" id="account-name" name="name" value={name} onChange={event => { setName(event.target.value); setNameError(''); setStatus('') }} autoComplete="name" aria-invalid={Boolean(nameError) || undefined} aria-describedby="account-name-status" />
-          <p className={`field__status${nameError ? ' error' : ''}`} id="account-name-status" data-reserve={NAME_ERROR}><span data-status-text>{nameError}</span></p>
+          <input className="field__input" id="account-name" name="name" value={name} onChange={event => { setName(event.target.value); setNameError(''); setStatus('') }} autoComplete="name" aria-invalid={Boolean(nameError) || undefined} aria-describedby={nameError ? 'account-name-status' : undefined} />
+          {nameError ? <p className="field__status error" id="account-name-status" role="status" aria-live="polite" aria-atomic="true">{nameError}</p> : null}
         </div>
         <div className="field">
           <label className="field__label" htmlFor="account-username">Username</label>
-          <input className="field__input" id="account-username" name="username" value={username} onChange={event => { setUsername(event.target.value); setUsernameError(''); setStatus('') }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(usernameError) || undefined} aria-describedby="account-username-hint account-username-status" />
+          <input className="field__input" id="account-username" name="username" value={username} onChange={event => { setUsername(event.target.value); setUsernameError(''); setStatus('') }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(usernameError) || undefined} aria-describedby={usernameError ? 'account-username-hint account-username-status' : 'account-username-hint'} />
           <p className="field__hint" id="account-username-hint">Optional. Use 3–20 characters, start with a letter, and use only lowercase letters, numbers, and underscores.</p>
-          <p className={`field__status${usernameError ? ' error' : ''}`} id="account-username-status" data-reserve={USERNAME_FORMAT_ERROR}><span data-status-text>{usernameError}</span></p>
+          {usernameError ? <p className="field__status error" id="account-username-status" role="status" aria-live="polite" aria-atomic="true">{usernameError}</p> : null}
         </div>
         <div className="field">
           <label className="field__label" htmlFor="account-email">Email</label>
@@ -81,8 +81,10 @@ export default function AccountDetailsForm({ initialName, initialUsername, email
           <p className="field__hint" id="account-email-hint">Your email cannot be changed here.</p>
         </div>
         <button className="btn btn--primary" type="submit" disabled={busy}><span aria-hidden={busy}>Save changes</span><span aria-hidden={!busy}>Saving…</span></button>
-        <p className={`settings-form__status${status && resultIsError(status) ? ' error' : ''}`} role="status" aria-live="polite" data-reserve="We couldn't save your changes. Try again."><span data-status-text className={status === 'No changes to save.' ? 'field__hint' : undefined}>{busy ? 'Saving…' : status}</span></p>
       </form>
+      <div className="settings-form__result" role="status" aria-live="polite" aria-atomic="true">
+        {busy || status ? <p className={`settings-form__status${status && resultIsError(status) ? ' error' : ''}`}><span className={status === 'No changes to save.' ? 'field__hint' : undefined}>{busy ? 'Saving…' : status}</span></p> : null}
+      </div>
     </section>
   )
 }

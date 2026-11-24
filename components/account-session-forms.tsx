@@ -48,15 +48,19 @@ export default function AccountSessionForms() {
         <form className="settings-form" onSubmit={submitOthers} aria-busy={othersBusy}>
           <p className="card__meta">Your current device stays signed in.</p>
           <button className="btn btn--secondary" type="submit" disabled={othersBusy}><span aria-hidden={othersBusy}>Sign out on other devices</span><span aria-hidden={!othersBusy}>Signing out…</span></button>
-          <p className={`settings-form__status${othersStatus && othersStatus !== 'Other devices signed out.' ? ' error' : ''}`} role="status" aria-live="polite" data-reserve="We couldn't sign out other devices. Try again."><span data-status-text>{othersBusy ? 'Signing out…' : othersStatus}</span></p>
         </form>
+        <div className="settings-form__result" role="status" aria-live="polite" aria-atomic="true">
+          {othersBusy || othersStatus ? <p className={`settings-form__status${othersStatus && othersStatus !== 'Other devices signed out.' ? ' error' : ''}`}>{othersBusy ? 'Signing out…' : othersStatus}</p> : null}
+        </div>
       </section>
       <section className="settings-form-card card card--borderless" aria-labelledby="current-session-title">
         <h2 className="card__title" id="current-session-title">Current session</h2>
         <form className="settings-form" onSubmit={submitCurrent} aria-busy={currentBusy}>
           <button className="btn btn--danger" type="submit" disabled={currentBusy}><span aria-hidden={currentBusy}>Sign out</span><span aria-hidden={!currentBusy}>Signing out…</span></button>
-          <p className={`settings-form__status${currentStatus ? ' error' : ''}`} role="status" aria-live="polite" data-reserve="Your session has expired. Sign in again."><span data-status-text>{currentBusy ? 'Signing out…' : currentStatus}</span></p>
         </form>
+        <div className="settings-form__result" role="status" aria-live="polite" aria-atomic="true">
+          {currentBusy || currentStatus ? <p className={`settings-form__status${currentStatus ? ' error' : ''}`}>{currentBusy ? 'Signing out…' : currentStatus}</p> : null}
+        </div>
       </section>
     </>
   )
