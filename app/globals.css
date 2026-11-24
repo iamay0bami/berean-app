@@ -554,9 +554,7 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 .settings-form-card { min-inline-size: 0; margin-block-start: var(--space-5); padding: var(--space-5); font-family: var(--font-interface), sans-serif; }
 .settings-form-card .card__title { margin: 0; }
 :is(.settings-form, .auth-form) { min-inline-size: 0; display: grid; gap: var(--space-4); margin-block-start: var(--space-5); }
-.settings-form .field__status { display: grid; min-block-size: var(--space-7); margin: 0; color: var(--text-muted); }
-.settings-form .field__status::before, .settings-form__status::before { content: attr(data-reserve); visibility: hidden; grid-area: 1 / 1; }
-.settings-form [data-status-text] { grid-area: 1 / 1; min-inline-size: 0; overflow-wrap: anywhere; }
+.settings-form .field__status { min-inline-size: 0; min-block-size: 0; margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
 .settings-form .field__status.error, .settings-form__status.error, .auth-form .field__status.error, .auth-form__status.error { color: var(--danger); }
 .settings-form .field__input[readonly] { color: var(--text-muted); cursor: default; }
 :is(.settings-form, .auth-form) .password-field .field__input { padding-inline-end: calc(var(--touch-target) + var(--space-2)); }
@@ -565,7 +563,9 @@ h1,h2,p { margin: 0; } h1,h2 { font-family: var(--font-serif); font-weight: 600;
 :is(.settings-form, .auth-form) > .btn { display: inline-grid; justify-self: start; min-inline-size: min(100%, calc(var(--space-8) + var(--space-8) + var(--space-7))); max-inline-size: 100%; padding-block: var(--space-2); text-align: center; overflow-wrap: anywhere; }
 :is(.settings-form, .auth-form) > .btn > [aria-hidden] { grid-area: 1 / 1; min-inline-size: 0; }
 :is(.settings-form, .auth-form) > .btn > [aria-hidden='true'] { visibility: hidden; }
-.settings-form__status { display: grid; min-block-size: var(--space-8); margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; }
+.settings-form__result { min-inline-size: 0; }
+.settings-form__result:not(:empty) { margin-block-start: var(--space-4); }
+.settings-form__status { min-inline-size: 0; min-block-size: 0; margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; overflow-wrap: anywhere; }
 .auth-form .field__status { min-block-size: 0; margin: 0; color: var(--text-muted); }
 .auth-form .field__status.ok { color: var(--community); }
 .auth-form__status { min-block-size: 0; margin: 0; color: var(--community); font-size: var(--text-ui); line-height: 1.45; overflow-wrap: anywhere; }

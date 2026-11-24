@@ -1075,20 +1075,28 @@ All labels are visible. Name, username, current-password and both new-password
 fields carry their correct autocomplete values; username disables spelling and
 capitalization. Inputs remain `--text-body` (16px), password pasting is not
 blocked, every target is at least 44px, and submit buttons are enabled until an
-action is actually pending. Each invalid input uses `aria-invalid` and a linked
-status id; submission focuses the first invalid field. Form statuses are polite
-live regions. Field slots reserve at least `--space-7` (48px), and form slots at
-least `--space-8` (64px). A hidden, non-announced copy of each slot's longest
-bounded message sizes it as text wraps, including at 200% text. The visible
-message occupies the same grid cell, so idle, error, pending and success do not
-move the following content. Idle and pending button labels likewise share one
-grid cell, keeping both width and height stable; only the active label is exposed
-to assistive technology. Password-toggle focus is explicit, and Account inputs
-reserve the full 44px toggle plus an 8px text clearance. Client request failures
-restore the submit controls and show the same bounded fallback as the action.
-The route loader uses the existing static Settings geometry with one status and
-no fake data or animation. Account adds no token, dependency, image, font,
-migration or RLS surface.
+action is actually pending. Each invalid input uses `aria-invalid`, conditionally
+references its mounted field error and focuses the first invalid field on
+submission. Username and New password always retain their hint association and
+add the error id only while that error exists. Field errors mount only with text
+as polite, atomic status regions; idle fields contribute no status element,
+height or grid gap.
+
+Each form owns a persistent `.settings-form__result` polite, atomic live-region
+wrapper immediately after the closing form. The wrapper is always available to
+assistive technology, is outside the form grid and is empty with zero height and
+no margin while idle. Its conditional `.settings-form__status` paragraph mounts
+only for pending or non-empty result text. A present result gets `--space-4`
+separation and grows the card in normal flow; field messages likewise move only
+the following content by their real wrapped height. There is no speculative
+reservation, hidden sizing copy, overlay or height animation. Idle and pending
+button labels still share one grid cell, keeping button width and height stable;
+only the active label is exposed to assistive technology. Password-toggle focus
+is explicit, and Account inputs reserve the full 44px toggle plus an 8px text
+clearance. Client request failures restore the submit controls and show the same
+bounded fallback as the action. The route loader uses the existing static
+Settings geometry with one status and no fake data or animation. Account adds no
+token, dependency, image, font, migration or RLS surface.
 
 
 ### 6.15 Auth — Pass 1 foundation and chooser
@@ -1138,10 +1146,12 @@ card rule. Long forms grow and scroll; no fixed card height or internal scroller
 | `.auth-description` | Hanken, `--text-body`, 1.55 leading, `--text-muted`, wrapping; no placeholder label substitute |
 | `.auth-choices` | Full-width existing button links, `--space-3` gaps, `--space-7` separation from identity; no interim hint |
 | `.auth-form` | Widened Settings grid/status/password/pending extension points, unchanged specificity; Hanken, `--space-4` gap; auth submit full width |
-| `.auth-form__status` | Conditional polite/atomic message with no reservation or minimum height; Account/Settings alone retain their reservation rules |
+| `.auth-form__status` | Conditional polite/atomic message with no reservation or minimum height; Account's earlier reservation contract is superseded by §6.14's persistent, zero-height-when-empty result wrapper |
 
-Account's status reservation, password clearance, 44px toggle/focus and pending
-button selectors are widened with `:is(.settings-form, .auth-form)` in place.
+The earlier Account reservation references in this Auth pass are superseded for
+Account by §6.14; auth keeps its existing conditional status implementation.
+Account's password clearance, 44px toggle/focus and pending button selectors are
+widened with `:is(.settings-form, .auth-form)` in place.
 The Account read-only input rule is not widened. The existing `.field__input`
 continues to own 16px control text and strong borders; PasswordField logic and
 icons remain unchanged. Auth-scoped reduced motion removes press scaling as
@@ -1283,10 +1293,11 @@ minimum block size. The auth form result also mounts only when text exists.
 This mount-on-change `role="status"`, polite, atomic pattern keeps a live region
 when there is an announcement while an empty state contributes neither height
 nor grid item/gap. Sign-in adopts the same conditional RESULT; its NOTICE was
-already conditional. Settings/Account retain their existing always-mounted,
-`data-reserve`, 48px field and 64px form status rules unchanged. This split is
-implemented with Settings-only reserve selectors plus auth-only status color,
-font and margin declarations—never a global primitive change.
+already conditional. The historical Settings/Account reservation references in
+this pass are superseded for Account by §6.14's field-on-text and persistent
+empty result-wrapper contract. This split is implemented with Settings-only
+visible-status selectors plus auth-only status color, font and margin
+declarations—never a global primitive change.
 
 `.auth-form--signup` resets the inherited top margin like sign-in. Fields remain
 separate direct grid groups with `--space-4` between groups and `--space-2`
@@ -1367,8 +1378,10 @@ the form after submit. All messages mount only with text as polite, atomic
 `role="status"` regions, without data-reserve, minimum height or an empty grid
 item. Assistive-technology announcement behavior still requires validation on
 the developer's target screen reader; mounting a region with text is the
-explicit approved auth pattern. Account/Settings status reservations remain
-unchanged. The forms and submit controls expose busy state with aria-busy.
+explicit approved auth pattern. The historical Account/Settings reservation
+reference in this pass is superseded for Account by §6.14's persistent,
+zero-height-when-empty result wrapper. The forms and submit controls expose busy
+state with aria-busy.
 
 Client-only display mapping leaves the submit handlers byte-for-byte unchanged:
 
